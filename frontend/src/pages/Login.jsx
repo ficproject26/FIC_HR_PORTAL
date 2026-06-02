@@ -212,38 +212,7 @@ export default function Login() {
             </button>
           </form>
 
-          {/* Demo credentials */}
-          <div style={{
-            marginTop: '1.5rem', padding: '1rem',
-            background: isDark ? '#0f172a' : '#f0f9ff',
-            borderRadius: '12px',
-            border: isDark ? '1px solid #1e3a5f' : '1px solid #bae6fd',
-          }}>
-            <p style={{ fontSize: '0.75rem', fontWeight: '700', color: '#0ea5e9', margin: '0 0 0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Demo Credentials
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {[
-                { role: 'Admin', email: 'admin@hrcrm.com' },
-                { role: 'HR', email: 'priya@hrcrm.com' },
-              ].map(c => (
-                <button
-                  key={c.role}
-                  type="button"
-                  onClick={() => setForm({ email: c.email, password: 'Admin@123' })}
-                  style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    textAlign: 'left', padding: '2px 0',
-                    fontSize: '0.8rem', color: isDark ? '#94a3b8' : '#475569',
-                  }}
-                >
-                  <span style={{ fontWeight: '600', color: isDark ? '#cbd5e1' : '#1e293b' }}>{c.role}:</span>{' '}
-                  {c.email} / Admin@123
-                  <span style={{ color: '#3b82f6', marginLeft: '6px', fontSize: '0.7rem' }}>(click to fill)</span>
-                </button>
-              ))}
-            </div>
-          </div>
+
         </div>
 
         <div style={{ textAlign: 'center', marginTop: '2rem', color: isDark ? '#475569' : '#94a3b8', fontSize: '0.75rem' }}>
