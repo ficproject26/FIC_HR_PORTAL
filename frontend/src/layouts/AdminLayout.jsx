@@ -91,16 +91,19 @@ export default function AdminLayout() {
           padding: '20px 16px', borderBottom: `1px solid ${sidebarBorder}`,
           minHeight: '72px',
         }}>
-          <div style={{
-            width: '36px', height: '36px', minWidth: '36px',
-            background: 'linear-gradient(135deg, #2563eb, #4f46e5)',
-            borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <RiShieldUserLine style={{ color: 'white', fontSize: '18px' }} />
-          </div>
+          <svg width="40" height="40" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style={{ borderRadius: '50%', background: '#fff', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+            <path d="M 38 28 L 62 28 L 62 32 L 44 32 L 44 48 L 38 48 Z" fill="#2563eb" />
+            <polygon points="53,37 62,48 44,48" fill="#facc15" />
+            <text x="50" y="65" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="11.5" fill="#2563eb" textAnchor="middle">
+              FORGE <tspan fill="#facc15">INDIA</tspan>
+            </text>
+            <text x="50" y="78" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="8" fill="#2563eb" textAnchor="middle" letterSpacing="1px">
+              CONNECT
+            </text>
+          </svg>
           {sidebarOpen && (
             <div>
-              <p style={{ fontWeight: '800', color: '#f1f5f9', fontSize: '0.9rem', margin: 0 }}>HR CRM</p>
+              <p style={{ fontWeight: '800', color: '#f1f5f9', fontSize: '0.9rem', margin: 0, letterSpacing: '0.5px' }}>FORGE INDIA</p>
               <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: 0 }}>Admin Panel</p>
             </div>
           )}

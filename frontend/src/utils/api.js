@@ -30,7 +30,12 @@ api.interceptors.response.use(
     const message = error.response?.data?.message || 'Something went wrong'
 
     if (error.response?.status === 401) {
-      // Token expired - clear auth and redirect
+      // Don't redirect if the 401 came from the login request itself
+      if (error.config && error.config.url && error.config.url.includes('/auth/login')) {
+        return Promise.reject(error)
+      }
+      
+      // Token expired or invalid - clear auth and redirect
       localStorage.removeItem('hr-crm-auth')
       window.location.href = '/login'
       return Promise.reject(error)

@@ -6,16 +6,21 @@ import useThemeStore from '../store/themeStore'
 import toast from 'react-hot-toast'
 
 export default function Login() {
-  const [form, setForm] = useState({ email: 'admin@hrcrm.com', password: 'Admin@123' })
+  const [form, setForm] = useState({ email: '', password: '' })
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const { login } = useAuthStore()
   const { isDark, toggleTheme } = useThemeStore()
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.email || !form.password) return toast.error('Please fill all fields')
+    setError('')
+    if (!form.email || !form.password) {
+      setError('Please fill all fields')
+      return toast.error('Please fill all fields')
+    }
     setLoading(true)
     const result = await login(form.email, form.password)
     setLoading(false)
@@ -23,7 +28,9 @@ export default function Login() {
       toast.success(`Welcome back, ${result.user.name}!`)
       navigate(result.user.role === 'admin' ? '/admin' : '/hr')
     } else {
-      toast.error(result.message || 'Login failed')
+      const msg = result.message || 'Invalid email or password'
+      setError(msg)
+      toast.error(msg)
     }
   }
 
@@ -62,21 +69,22 @@ export default function Login() {
         }}>
           {/* Logo */}
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <div style={{
-              width: '64px', height: '64px',
-              background: 'linear-gradient(135deg, #2563eb, #4f46e5)',
-              borderRadius: '16px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 1rem',
-              boxShadow: '0 8px 24px rgba(37,99,235,0.4)',
-            }}>
-              <RiShieldUserLine style={{ color: 'white', fontSize: '28px' }} />
-            </div>
+            <svg width="80" height="80" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style={{ borderRadius: '50%', background: '#fff', flexShrink: 0, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', margin: '0 auto 1rem' }}>
+              <path d="M 38 28 L 62 28 L 62 32 L 44 32 L 44 48 L 38 48 Z" fill="#2563eb" />
+              <polygon points="53,37 62,48 44,48" fill="#facc15" />
+              <text x="50" y="65" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="11.5" fill="#2563eb" textAnchor="middle">
+                FORGE <tspan fill="#facc15">INDIA</tspan>
+              </text>
+              <text x="50" y="78" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="8" fill="#2563eb" textAnchor="middle" letterSpacing="1px">
+                CONNECT
+              </text>
+            </svg>
             <h1 style={{
               fontSize: '1.5rem', fontWeight: '800',
               color: isDark ? '#f1f5f9' : '#0f172a',
               margin: '0 0 0.25rem',
-            }}>HR CRM Portal</h1>
+              letterSpacing: '0.5px'
+            }}>FORGE INDIA</h1>
             <p style={{ color: '#94a3b8', fontSize: '0.875rem', margin: 0 }}>
               Sign in to your account
             </p>
@@ -98,7 +106,8 @@ export default function Login() {
                   type="email"
                   value={form.email}
                   onChange={e => setForm({ ...form, email: e.target.value })}
-                  placeholder="admin@hrcrm.com"
+                  placeholder="Enter your email"
+                  autoComplete="off"
                   style={{
                     width: '100%', padding: '0.75rem 1rem 0.75rem 2.75rem',
                     borderRadius: '12px',
@@ -130,7 +139,8 @@ export default function Login() {
                   type={showPass ? 'text' : 'password'}
                   value={form.password}
                   onChange={e => setForm({ ...form, password: e.target.value })}
-                  placeholder="••••••••"
+                  placeholder="Enter your password"
+                  autoComplete="new-password"
                   style={{
                     width: '100%', padding: '0.75rem 3rem 0.75rem 2.75rem',
                     borderRadius: '12px',
@@ -158,6 +168,23 @@ export default function Login() {
                 </button>
               </div>
             </div>
+
+            {/* Error Message */}
+            {error && (
+              <div style={{
+                padding: '0.75rem 1rem',
+                background: 'rgba(239,68,68,0.1)',
+                border: '1px solid rgba(239,68,68,0.3)',
+                borderRadius: '10px',
+                color: '#ef4444',
+                fontSize: '0.85rem',
+                fontWeight: '500',
+                textAlign: 'center',
+                marginBottom: '0.5rem',
+              }}>
+                ⚠️ {error}
+              </div>
+            )}
 
             {/* Submit */}
             <button
@@ -219,10 +246,9 @@ export default function Login() {
           </div>
         </div>
 
-        {/* Footer */}
-        <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', marginTop: '1.5rem' }}>
-          © 2024 HR CRM. All rights reserved.
-        </p>
+        <div style={{ textAlign: 'center', marginTop: '2rem', color: isDark ? '#475569' : '#94a3b8', fontSize: '0.75rem' }}>
+          © {new Date().getFullYear()} FORGE INDIA CONNECT. All rights reserved.
+        </div>
       </div>
 
       <style>{`

@@ -40,7 +40,7 @@ export default function HRFollowUps() {
   const [followUps, setFollowUps] = useState([])
   const [pagination, setPagination] = useState({})
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('pending')
+  const [filter, setFilter] = useState('')
   const [page, setPage] = useState(1)
   const [showModal, setShowModal] = useState(false)
   const [selected, setSelected] = useState(null)

@@ -13,7 +13,7 @@ export default function HRTasks() {
   const [tasks, setTasks] = useState([])
   const [pagination, setPagination] = useState({})
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('pending')
+  const [filter, setFilter] = useState('')
   const [page, setPage] = useState(1)
   const { isDark } = useThemeStore()
   const t = getTheme(isDark)

@@ -34,25 +34,7 @@ router.post('/login', async (req, res) => {
     user.last_login = new Date();
     await user.save();
 
-    // Create attendance record for today
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const existingAttendance = await Attendance.findOne({
-      user_id: user._id,
-      date: { $gte: today, $lt: tomorrow }
-    });
-
-    if (!existingAttendance) {
-      await Attendance.create({
-        user_id: user._id,
-        login_time: new Date(),
-        date: new Date(),
-        ip_address: req.ip
-      });
-    }
+    // Automatic attendance creation removed. Attendance is now manually triggered via the dashboard.
 
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
@@ -87,23 +69,7 @@ router.post('/login', async (req, res) => {
 // POST /api/auth/logout
 router.post('/logout', authenticate, async (req, res) => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const attendance = await Attendance.findOne({
-      user_id: req.user.id,
-      date: { $gte: today }
-    }).sort({ created_at: -1 });
-
-    if (attendance && attendance.login_time) {
-      const loginTime = new Date(attendance.login_time);
-      const logoutTime = new Date();
-      const workingHours = (logoutTime - loginTime) / (1000 * 60 * 60);
-
-      attendance.logout_time = logoutTime;
-      attendance.working_hours = workingHours.toFixed(2);
-      await attendance.save();
-    }
+    // Automatic attendance logout removed. Attendance logout is now manually triggered via the dashboard.
 
     if (req.io) {
       req.io.emit('user_status_change', { userId: req.user.id, status: 'offline' });

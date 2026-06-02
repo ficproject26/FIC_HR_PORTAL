@@ -196,13 +196,18 @@ export default function HRManagement() {
           <button onClick={handleSave} disabled={saving} style={{ ...btnPrimary, opacity: saving ? 0.7 : 1 }}>{saving ? 'Saving...' : editHR ? 'Update' : 'Create'}</button>
         </>}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-          <div>
-            <label style={label(isDark)}>Role *</label>
-            <select value={form.role || 'hr'} onChange={e => setForm({ ...form, role: e.target.value })} style={input(isDark)}>
-              <option value="hr">HR</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
+          {[
+            { lbl: 'Full Name *', key: 'name', type: 'text', ph: 'Jane Smith' },
+            { lbl: 'Email *', key: 'email', type: 'email', ph: 'jane@company.com' },
+            { lbl: 'Phone', key: 'phone', type: 'text', ph: '+91 9876543210' },
+            ...(!editHR ? [{ lbl: 'Password *', key: 'password', type: 'password', ph: 'Min 6 characters' }] : []),
+            { lbl: 'Designation', key: 'designation', type: 'text', ph: 'HR Executive' },
+          ].map(f => (
+            <div key={f.key}>
+              <label style={label(isDark)}>{f.lbl}</label>
+              <input type={f.type} placeholder={f.ph} value={form[f.key] || ''} onChange={e => setForm({ ...form, [f.key]: e.target.value })} style={input(isDark)} />
+            </div>
+          ))}
           <div>
             <label style={label(isDark)}>Department</label>
             <select value={form.department || ''} onChange={e => setForm({ ...form, department: e.target.value })} style={input(isDark)}>
@@ -214,18 +219,13 @@ export default function HRManagement() {
               <option value="Operations">Operations</option>
             </select>
           </div>
-          {[
-            { lbl: 'Full Name *', key: 'name', type: 'text', ph: 'Jane Smith' },
-            { lbl: 'Email *', key: 'email', type: 'email', ph: 'jane@company.com' },
-            ...(!editHR ? [{ lbl: 'Password *', key: 'password', type: 'password', ph: 'Min 6 characters' }] : []),
-            { lbl: 'Phone', key: 'phone', type: 'text', ph: '+91 9876543210' },
-            { lbl: 'Designation', key: 'designation', type: 'text', ph: 'HR Executive' },
-          ].map(f => (
-            <div key={f.key}>
-              <label style={label(isDark)}>{f.lbl}</label>
-              <input type={f.type} placeholder={f.ph} value={form[f.key] || ''} onChange={e => setForm({ ...form, [f.key]: e.target.value })} style={input(isDark)} />
-            </div>
-          ))}
+          <div>
+            <label style={label(isDark)}>Role *</label>
+            <select value={form.role || 'hr'} onChange={e => setForm({ ...form, role: e.target.value })} style={input(isDark)}>
+              <option value="hr">HR</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
         </div>
       </Modal>
 
