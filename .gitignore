@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+*.log
+uploads/resumes/*.pdf
+uploads/resumes/*.doc
+uploads/resumes/*.docx
+uploads/*.xlsx
+.DS_Store
