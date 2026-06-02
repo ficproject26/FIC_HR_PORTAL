@@ -1,8 +1,12 @@
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
+const baseURL = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : '/api'
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL,
   timeout: 15000,
 })
 
