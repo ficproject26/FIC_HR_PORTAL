@@ -118,7 +118,7 @@ export default function HRTasks() {
           {tasks.length === 0 && (
             <div style={{ ...card(isDark), textAlign:'center', padding:'64px 24px' }}>
               <RiCheckLine style={{ fontSize:'48px', color:t.textMuted, marginBottom:'12px' }} />
-              <p style={{ color:t.textSecondary, margin:0 }}>No tasks assigned yet. Ask admin to assign tasks from HR Tasks.</p>
+              <p style={{ color:t.textSecondary, margin:0 }}>No tasks assigned yet. Ask admin to assign tasks from Tasks.</p>
             </div>
           )}
           <Pagination pagination={pagination} onPageChange={setPage} />

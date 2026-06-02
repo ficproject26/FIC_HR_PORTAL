@@ -266,7 +266,7 @@ export default function HRLeads() {
             <div style={{ overflowX:'auto' }}>
               <table style={{ width:'100%', borderCollapse:'collapse' }}>
                 <thead>
-                  <tr>{['Lead','Phone','Position','Status','Priority','Status Updated','Created','Actions'].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr>
+                  <tr>{['Lead','Phone','Position','Source','Status','Priority','Status Updated','Created','Actions'].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr>
                 </thead>
                 <tbody>
                   {leads.map(lead => (
@@ -297,6 +297,16 @@ export default function HRLeads() {
                         )}
                       </td>
                       <td style={{ ...tdStyle, fontSize:'0.8rem' }}>{lead.position_applied || '—'}</td>
+                      <td style={{ ...tdStyle }}>
+                        <span style={{ 
+                          padding: '4px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '600',
+                          background: lead.lead_source === 'Own Lead' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+                          color: lead.lead_source === 'Own Lead' ? '#10b981' : '#3b82f6',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {lead.lead_source || 'Admin Lead'}
+                        </span>
+                      </td>
                       <td style={tdStyle}><StatusBadge status={lead.status} /></td>
                       <td style={tdStyle}><PriorityBadge priority={lead.priority} /></td>
 

@@ -246,8 +246,8 @@ export default function HRMonitoring() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: t.textPrimary, margin: '0 0 4px' }}>HR Monitoring</h1>
-          <p style={{ color: t.textSecondary, fontSize: '0.875rem', margin: 0 }}>Real-time tracking of HR activity</p>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: t.textPrimary, margin: '0 0 4px' }}>Attendance</h1>
+          <p style={{ color: t.textSecondary, fontSize: '0.875rem', margin: 0 }}>Real-time tracking of HR attendance and activity</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', color: t.textSecondary }}>

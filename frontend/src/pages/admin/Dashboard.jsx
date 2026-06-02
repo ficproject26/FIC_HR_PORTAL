@@ -8,6 +8,7 @@ import { getInitials, formatDurationHMS } from '../../utils/helpers'
 import useThemeStore from '../../store/themeStore'
 import { card, getTheme, getStatusBadge, getPriorityBadge } from '../../utils/styles'
 import Modal from '../../components/ui/Modal'
+import HRConsultantModal from '../../components/admin/HRConsultantModal'
 
 
 export default function AdminDashboard() {
@@ -21,6 +22,7 @@ export default function AdminDashboard() {
   const [modalType, setModalType] = useState('')
   const [modalList, setModalList] = useState([])
   const [modalLoading, setModalLoading] = useState(false)
+  const [selectedHRId, setSelectedHRId] = useState(null)
 
   const handleCardClick = async (type, title) => {
     setModalType(type)
@@ -286,6 +288,81 @@ export default function AdminDashboard() {
         <StatCard icon={RiTimeLine} label="Pending Follow-ups" value={stats?.pendingFollowups} color="orange" onClick={() => handleCardClick('followups', 'Pending Follow-ups')} />
       </div>
 
+      {/* HR Consultants Grid */}
+      <div style={{ marginBottom: '32px' }}>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: t.textPrimary, margin: '0 0 4px' }}>HR Consultants</h2>
+        <p style={{ color: t.textSecondary, fontSize: '0.875rem', margin: '0 0 20px' }}>Click a consultant to manage their leads, badges, attendance & reports.</p>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px' }}>
+          {hrRankings?.map(hr => (
+            <div 
+              key={hr.id}
+              onClick={() => setSelectedHRId(hr.id)}
+              style={{
+                background: isDark ? '#1e293b' : '#fff',
+                borderRadius: '20px',
+                padding: '24px',
+                boxShadow: isDark ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 10px 30px rgba(0,0,0,0.05)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s',
+                border: `1px solid ${t.border}`
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = isDark ? '0 10px 15px -3px rgba(0, 0, 0, 0.4)' : '0 20px 40px rgba(0,0,0,0.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = isDark ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 10px 30px rgba(0,0,0,0.05)';
+              }}
+            >
+              <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, #2563eb, #eab308)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', color: '#fff', fontSize: '2rem', fontWeight: '800', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
+                {getInitials(hr.name || 'User')}
+              </div>
+              <h3 style={{ margin: '0 0 4px', fontSize: '1.15rem', fontWeight: '800', color: t.textPrimary }}>{hr.name || 'Unknown User'}</h3>
+              <p style={{ margin: '0 0 20px', fontSize: '0.8rem', color: t.textSecondary }}>{hr.email || `${(hr.name || 'user').split(' ')[0].toLowerCase()}@forgeindia.in`}</p>
+              
+              <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ textAlign: 'center', flex: 1 }}>
+                  <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: t.textPrimary }}>{hr.total_leads}</p>
+                  <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: '700', color: t.textSecondary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Leads</p>
+                </div>
+                <div style={{ textAlign: 'center', background: 'linear-gradient(135deg, #2563eb, #eab308)', padding: '8px 24px', borderRadius: '12px', color: '#fff', boxShadow: '0 4px 10px rgba(37,99,235,0.3)', flexShrink: 0 }}>
+                  <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800' }}>{hr.converted_leads}</p>
+                  <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Won</p>
+                </div>
+                <div style={{ textAlign: 'center', flex: 1 }}>
+                  <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: t.textPrimary }}>{hr.badges?.length || 0}</p>
+                  <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: '700', color: t.textSecondary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Badges</p>
+                </div>
+              </div>
+              
+              <div style={{ display: 'flex', gap: '8px', marginTop: '16px', minHeight: '24px', flexWrap: 'wrap' }}>
+                {hr.badges?.map(badgeId => {
+                  const icons = {
+                    employee_of_the_week: { icon: '🌟', label: 'Employee of the Week' },
+                    employee_of_the_month: { icon: '🏆', label: 'Employee of the Month' },
+                    best_caller: { icon: '📞', label: 'Best Caller' },
+                    best_consultant: { icon: '💼', label: 'Best Consultant' },
+                    fast_lead_closer: { icon: '⚡', label: 'Fast Lead Closer' },
+                    professional_attitude: { icon: '🎯', label: 'Professional Attitude' },
+                    active_bee: { icon: '🐝', label: 'Active Bee' },
+                    newbie: { icon: '🌱', label: 'Newbie' }
+                  };
+                  const b = icons[badgeId];
+                  if (!b) return null;
+                  return (
+                    <span key={badgeId} style={{ fontSize: '1.1rem' }} title={b.label}>
+                      {b.icon}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Charts Row */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '24px' }}>
         {/* Monthly Conversions */}
@@ -399,6 +476,13 @@ export default function AdminDashboard() {
           renderModalContent()
         )}
       </Modal>
+
+      {/* HR Consultant Profile Modal */}
+      <HRConsultantModal 
+        isOpen={!!selectedHRId} 
+        onClose={() => setSelectedHRId(null)} 
+        hrId={selectedHRId} 
+      />
     </div>
   )
 }

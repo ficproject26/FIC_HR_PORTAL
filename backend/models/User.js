@@ -12,6 +12,7 @@ const UserSchema = new mongoose.Schema({
   is_active: { type: Boolean, default: true },
   is_blocked: { type: Boolean, default: false },
   last_login: { type: Date },
+  badges: { type: [String], default: [] },
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 
 module.exports = mongoose.model('User', UserSchema);

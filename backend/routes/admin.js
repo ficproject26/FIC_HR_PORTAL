@@ -80,8 +80,10 @@ router.get('/dashboard', async (req, res) => {
           _id: 1,
           id: "$_id",
           name: 1,
+          email: 1,
           avatar: 1,
           department: 1,
+          badges: 1,
           total_leads: { $size: "$leads" },
           converted_leads: { 
             $size: { 
@@ -499,6 +501,107 @@ router.get('/pending-followups', async (req, res) => {
     });
 
     res.json({ success: true, data: formatted });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Master list of available badges
+const ALL_BADGES = [
+  { id: 'employee_of_the_week', label: 'Employee of the Week', icon: '🌟' },
+  { id: 'employee_of_the_month', label: 'Employee of the Month', icon: '🏆' },
+  { id: 'best_caller', label: 'Best Caller', icon: '📞' },
+  { id: 'best_consultant', label: 'Best Consultant', icon: '💼' },
+  { id: 'fast_lead_closer', label: 'Fast Lead Closer', icon: '⚡' },
+  { id: 'professional_attitude', label: 'Professional Attitude', icon: '🎯' },
+  { id: 'active_bee', label: 'Active Bee', icon: '🐝' },
+  { id: 'newbie', label: 'Newbie', icon: '🌱' },
+];
+
+// GET /api/admin/hr-consultant/:id - Detailed HR Consultant Stats
+router.get('/hr-consultant/:id', async (req, res) => {
+  try {
+    const hrId = req.params.id;
+    const user = await User.findById(hrId).select('-password');
+    if (!user) return res.status(404).json({ success: false, message: 'HR not found' });
+
+    const leads = await Lead.find({ assigned_to: hrId });
+    const totalLeads = leads.length;
+    const convertedLeads = leads.filter(l => l.status === 'converted').length;
+    const followupLeads = leads.filter(l => l.status === 'followup').length;
+    const exemptionLeads = leads.filter(l => l.status === 'exemption').length;
+    const notInterestedLeads = leads.filter(l => l.status === 'not_interested').length;
+    const conversionRate = totalLeads > 0 ? ((convertedLeads / totalLeads) * 100).toFixed(1) : 0;
+
+    const attendances = await Attendance.find({ user_id: hrId });
+    const totalLogins = attendances.length;
+
+    const Performance = require('../models/Performance');
+    const performances = await Performance.find({ user_id: hrId }).sort({ date: -1 }).limit(10);
+
+    const userBadges = user.badges || [];
+    const mappedBadges = ALL_BADGES.map(b => ({
+      ...b,
+      earned: userBadges.includes(b.id)
+    }));
+
+    const totalCalls = performances.reduce((sum, p) => sum + (p.calls_made || 0), 0);
+    const totalEmails = performances.reduce((sum, p) => sum + (p.emails_sent || 0), 0);
+    const totalMeetings = performances.reduce((sum, p) => sum + (p.meetings_scheduled || 0), 0);
+
+    res.json({
+      success: true,
+      data: {
+        user,
+        leads: leads.slice(0, 50),
+        stats: {
+          totalLeads,
+          convertedLeads,
+          followupLeads,
+          exemptionLeads,
+          notInterestedLeads,
+          conversionRate,
+          totalLogins,
+          totalBadges: userBadges.length,
+          totalCalls,
+          totalEmails,
+          totalMeetings
+        },
+        badges: mappedBadges,
+        attendances: attendances.sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 10),
+        performances
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// PUT /api/admin/hr-consultant/:id/toggle-badge - Award/Revoke badge
+router.put('/hr-consultant/:id/toggle-badge', async (req, res) => {
+  try {
+    const hrId = req.params.id;
+    const { badgeId } = req.body;
+
+    const user = await User.findById(hrId);
+    if (!user) return res.status(404).json({ success: false, message: 'HR not found' });
+
+    if (!user.badges) {
+      user.badges = [];
+    }
+
+    const index = user.badges.indexOf(badgeId);
+    if (index > -1) {
+      user.badges.splice(index, 1); // Revoke
+    } else {
+      user.badges.push(badgeId); // Award
+    }
+
+    await user.save();
+
+    res.json({ success: true, badges: user.badges });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Server error' });

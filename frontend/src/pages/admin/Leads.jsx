@@ -11,9 +11,9 @@ import useThemeStore from '../../store/themeStore'
 import { card, getTheme, btnPrimary, btnSecondary, input, label } from '../../utils/styles'
 import toast from 'react-hot-toast'
 
-const STATUS_OPTIONS = ['new','contacted','qualified','proposal','negotiation','converted','lost']
+const STATUS_OPTIONS = ['new', 'followup', 'exemption', 'converted', 'not_interested', 'contacted', 'qualified', 'proposal', 'negotiation', 'lost']
 const PRIORITY_OPTIONS = ['low','medium','high','urgent']
-const SOURCE_OPTIONS = ['manual','excel','website','referral','social']
+const SOURCE_OPTIONS = ['manual','excel']
 const emptyForm = { name:'', email:'', phone:'', source:'manual', status:'new', priority:'medium', position_applied:'', assigned_to:'' }
 
 const getAssignedId = (lead) => lead.assigned_to_id || (lead.assigned_to?._id ?? lead.assigned_to) || ''
@@ -42,11 +42,21 @@ export default function AdminLeads() {
   const { isDark } = useThemeStore()
   const t = getTheme(isDark)
 
-  useEffect(() => { fetchHRUsers() }, [])
-  useEffect(() => { fetchLeads() }, [page, filters])
+  const [selectedHrView, setSelectedHrView] = useState(null)
+  const [dashboardStats, setDashboardStats] = useState(null)
 
-  const debouncedFetch = useCallback(debounce(() => { setPage(1); fetchLeads() }, 400), [search, filters])
+  useEffect(() => { fetchHRUsers(); fetchDashboardStats(); }, [])
+  useEffect(() => { fetchLeads() }, [page, filters, selectedHrView])
+
+  const debouncedFetch = useCallback(debounce(() => { setPage(1); fetchLeads() }, 400), [search, filters, selectedHrView])
   useEffect(() => { debouncedFetch() }, [search])
+
+  const fetchDashboardStats = async () => {
+    try {
+      const res = await api.get('/admin/dashboard')
+      setDashboardStats(res.data.data)
+    } catch (e) {}
+  }
 
   const fetchHRUsers = async () => {
     try {
@@ -56,10 +66,16 @@ export default function AdminLeads() {
   }
 
   const fetchLeads = async () => {
+    if (!selectedHrView) return;
     setLoading(true)
     try {
       const params = new URLSearchParams({ page, limit: 10, search })
       Object.entries(filters).forEach(([k,v]) => v && params.set(k, v))
+      if (selectedHrView === 'unassigned') {
+        params.set('assigned_to', 'unassigned')
+      } else {
+        params.set('assigned_to', selectedHrView.id || selectedHrView._id)
+      }
       const res = await api.get(`/leads?${params}`)
       setLeads(res.data.data); setPagination(res.data.pagination)
     } catch(e) {} finally { setLoading(false) }
@@ -228,8 +244,15 @@ export default function AdminLeads() {
     <div style={{ fontFamily:"'Inter', system-ui, sans-serif" }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'24px', flexWrap:'wrap', gap:'12px' }}>
         <div>
-          <h1 style={{ fontSize:'1.5rem', fontWeight:'800', color:t.textPrimary, margin:'0 0 4px' }}>Lead Management</h1>
-          <p style={{ color:t.textSecondary, fontSize:'0.875rem', margin:0 }}>Manage and track all recruitment leads</p>
+          <h1 style={{ fontSize:'1.5rem', fontWeight:'800', color:t.textPrimary, margin:'0 0 4px', display:'flex', alignItems:'center', gap:'8px' }}>
+            {selectedHrView ? (
+              <>
+                <button onClick={() => { setSelectedHrView(null); setLeads([]); setPage(1); }} style={{ background:'transparent', border:'none', color:t.textSecondary, cursor:'pointer', padding:0, display:'flex', alignItems:'center', fontSize:'1.2rem' }}>←</button>
+                {selectedHrView === 'unassigned' ? 'Unassigned Leads' : `${selectedHrView.name}'s Leads`}
+              </>
+            ) : 'Lead'}
+          </h1>
+          <p style={{ color:t.textSecondary, fontSize:'0.875rem', margin:0 }}>{selectedHrView ? 'Manage leads for this consultant' : 'Select a consultant to manage their leads'}</p>
         </div>
         <div style={{ display:'flex', gap:'10px' }}>
           <button onClick={() => setShowUpload(true)} style={btnSecondary(isDark)}><RiUploadLine /> Bulk Upload</button>
@@ -238,29 +261,93 @@ export default function AdminLeads() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div style={{ ...card(isDark), padding:'16px', marginBottom:'20px', display:'flex', flexWrap:'wrap', gap:'10px', alignItems:'center' }}>
-        <SearchBar value={search} onChange={v => { setSearch(v); setPage(1) }} placeholder="Search leads..." style={{ flex:'1', minWidth:'200px' }} />
-        {[
-          { key:'status', opts:STATUS_OPTIONS, ph:'All Status' },
-          { key:'priority', opts:PRIORITY_OPTIONS, ph:'All Priority' },
-          { key:'source', opts:SOURCE_OPTIONS, ph:'All Sources' },
-        ].map(f => (
-          <select key={f.key} value={filters[f.key]} onChange={e => setFilters({ ...filters, [f.key]: e.target.value })} style={selectStyle}>
-            <option value="">{f.ph}</option>
-            {f.opts.map(o => <option key={o} value={o} style={{ textTransform:'capitalize' }}>{o}</option>)}
-          </select>
-        ))}
-      </div>
+      {!selectedHrView ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+          <div 
+            onClick={() => setSelectedHrView('unassigned')}
+            style={{
+              background: isDark ? '#1e293b' : '#fff',
+              borderRadius: '20px',
+              padding: '24px',
+              boxShadow: isDark ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 10px 30px rgba(0,0,0,0.05)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', transition: 'transform 0.2s', border: `1px dashed ${t.textSecondary}`
+            }}
+          >
+            <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: isDark ? '#334155' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', color: t.textSecondary, fontSize: '2rem' }}>
+              <RiTeamLine />
+            </div>
+            <h3 style={{ margin: '0 0 4px', fontSize: '1.15rem', fontWeight: '800', color: t.textPrimary }}>Unassigned Leads</h3>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: t.textSecondary }}>View all unassigned leads</p>
+          </div>
+          
+          {dashboardStats?.hrRankings?.map(hr => (
+            <div 
+              key={hr.id}
+              onClick={() => setSelectedHrView(hr)}
+              style={{
+                background: isDark ? '#1e293b' : '#fff',
+                borderRadius: '20px',
+                padding: '24px',
+                boxShadow: isDark ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 10px 30px rgba(0,0,0,0.05)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                cursor: 'pointer', transition: 'transform 0.2s', border: `1px solid ${t.border}`
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, #2563eb, #eab308)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', color: '#fff', fontSize: '2rem', fontWeight: '800', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
+                {hr.name ? hr.name.substring(0, 2).toUpperCase() : 'U'}
+              </div>
+              <h3 style={{ margin: '0 0 4px', fontSize: '1.15rem', fontWeight: '800', color: t.textPrimary }}>{hr.name || 'Unknown User'}</h3>
+              <p style={{ margin: '0 0 20px', fontSize: '0.8rem', color: t.textSecondary }}>{hr.email || `${(hr.name || 'user').split(' ')[0].toLowerCase()}@forgeindia.in`}</p>
+              
+              <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ textAlign: 'center', flex: 1 }}>
+                  <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: t.textPrimary }}>{hr.total_leads}</p>
+                  <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: '700', color: t.textSecondary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Leads</p>
+                </div>
+                <div style={{ textAlign: 'center', background: 'linear-gradient(135deg, #2563eb, #eab308)', padding: '8px 24px', borderRadius: '12px', color: '#fff', boxShadow: '0 4px 10px rgba(37,99,235,0.3)', flexShrink: 0 }}>
+                  <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800' }}>{hr.converted_leads}</p>
+                  <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Won</p>
+                </div>
+                <div style={{ textAlign: 'center', flex: 1 }}>
+                  <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: t.textPrimary }}>{hr.badges?.length || 0}</p>
+                  <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: '700', color: t.textSecondary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Badges</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <>
+          {/* Filters */}
+          <div style={{ ...card(isDark), padding:'16px', marginBottom:'20px', display:'flex', flexWrap:'wrap', gap:'10px', alignItems:'center' }}>
+            <SearchBar value={search} onChange={v => { setSearch(v); setPage(1) }} placeholder="Search leads..." style={{ flex:'1', minWidth:'200px' }} />
+            {[
+              { key:'status', opts:STATUS_OPTIONS, ph:'All Status' },
+              { key:'priority', opts:PRIORITY_OPTIONS, ph:'All Priority' },
+              { key:'source', opts:SOURCE_OPTIONS, ph:'All Sources' },
+            ].map(f => (
+              <select key={f.key} value={filters[f.key]} onChange={e => setFilters({ ...filters, [f.key]: e.target.value })} style={selectStyle}>
+                <option value="">{f.ph}</option>
+                {f.opts.map(o => <option key={o} value={o} style={{ textTransform:'capitalize' }}>{o.replace(/_/g, ' ')}</option>)}
+              </select>
+            ))}
+          </div>
 
-      {/* Table */}
+          {/* Table */}
       <div style={{ ...card(isDark), padding:0, overflow:'hidden' }}>
         {loading ? <PageLoader /> : (
           <>
             <div style={{ overflowX:'auto' }}>
               <table style={{ width:'100%', borderCollapse:'collapse' }}>
                 <thead>
-                  <tr>{['Lead','Contact','Status','Priority','Position Applied','Assigned To','Source','Created','Actions'].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr>
+                  <tr>{['Lead','Contact','Priority','Position Applied','Assigned To','Origin','Created','Status','Actions'].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr>
                 </thead>
                 <tbody>
                   {leads.map(lead => (
@@ -284,7 +371,6 @@ export default function AdminLeads() {
                           <span style={{ color:t.textMuted }}>—</span>
                         )}
                       </td>
-                      <td style={tdStyle}><StatusBadge status={lead.status} /></td>
                       <td style={tdStyle}><PriorityBadge priority={lead.priority} /></td>
                       <td style={{ ...tdStyle, fontSize:'0.8rem' }}>{lead.position_applied || '—'}</td>
                       <td style={{ ...tdStyle, minWidth:'160px' }}>
@@ -299,10 +385,18 @@ export default function AdminLeads() {
                           ))}
                         </select>
                       </td>
-                      <td style={tdStyle}>
-                        <span style={{ padding:'2px 8px', borderRadius:'9999px', fontSize:'0.72rem', fontWeight:'600', background: isDark ? '#334155' : '#f1f5f9', color:t.textSecondary, textTransform:'capitalize' }}>{lead.source}</span>
+                      <td style={{ ...tdStyle }}>
+                        <span style={{ 
+                          padding: '4px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '600',
+                          background: lead.lead_source === 'Own Lead' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+                          color: lead.lead_source === 'Own Lead' ? '#10b981' : '#3b82f6',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {lead.lead_source || 'Admin Lead'}
+                        </span>
                       </td>
                       <td style={{ ...tdStyle, fontSize:'0.78rem', color:t.textSecondary }}>{formatDate(lead.created_at)}</td>
+                      <td style={tdStyle}><StatusBadge status={lead.status} /></td>
                       <td style={tdStyle}>
                         <div style={{ display:'flex', gap:'4px' }}>
                           <button onClick={() => openEdit(lead)} style={{ padding:'6px', borderRadius:'8px', border:'none', background:'transparent', cursor:'pointer', color:'#3b82f6', fontSize:'16px', display:'flex' }}><RiEditLine /></button>
@@ -319,6 +413,8 @@ export default function AdminLeads() {
           </>
         )}
       </div>
+        </>
+      )}
 
       {/* Add/Edit Modal */}
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editLead ? 'Edit Lead' : 'Add New Lead'} size="md"
@@ -338,40 +434,93 @@ export default function AdminLeads() {
               <input type="email" placeholder="Email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={input(isDark)} />
             </div>
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
-            <div>
-              <label style={label(isDark)}>Status</label>
-              <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} style={{ ...input(isDark) }}>
-                {STATUS_OPTIONS.map(o => <option key={o} value={o} style={{ textTransform:'capitalize' }}>{o}</option>)}
-              </select>
+          <div>
+            <label style={label(isDark)}>Status</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '6px', marginBottom: '8px' }}>
+              {[
+                { id: 'new', label: 'New' },
+                { id: 'followup', label: 'Followup' },
+                { id: 'exemption', label: 'Exemption' },
+                { id: 'converted', label: 'Converted' },
+                { id: 'not_interested', label: 'Not Interested' }
+              ].map(st => {
+                const isActive = form.status === st.id;
+                return (
+                  <button
+                    key={st.id}
+                    type="button"
+                    onClick={() => setForm({ ...form, status: st.id })}
+                    style={{
+                      padding: '12px 16px',
+                      borderRadius: '12px',
+                      border: isActive ? 'none' : `1.5px solid ${isDark ? '#334155' : '#e2e8f0'}`,
+                      background: isActive ? 'linear-gradient(135deg, #2563eb, #4f46e5)' : (isDark ? '#1e293b' : '#fff'),
+                      color: isActive ? '#fff' : t.textPrimary,
+                      fontWeight: '700',
+                      fontSize: '0.9rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: isActive ? '0 4px 12px rgba(37,99,235,0.3)' : 'none',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    {st.label}
+                  </button>
+                );
+              })}
+              {!['new', 'followup', 'exemption', 'converted', 'not_interested'].includes(form.status) && (
+                <button
+                  key={form.status}
+                  type="button"
+                  style={{
+                    padding: '12px 16px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #2563eb, #4f46e5)',
+                    color: '#fff',
+                    fontWeight: '700',
+                    fontSize: '0.9rem',
+                    gridColumn: '1 / -1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  Current: {form.status}
+                </button>
+              )}
             </div>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
             <div>
               <label style={label(isDark)}>Priority</label>
               <select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} style={{ ...input(isDark) }}>
                 {PRIORITY_OPTIONS.map(o => <option key={o} value={o} style={{ textTransform:'capitalize' }}>{o}</option>)}
               </select>
             </div>
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
             <div>
               <label style={label(isDark)}>Position Applied</label>
               <input type="text" placeholder="e.g. Software Engineer" value={form.position_applied} onChange={e => setForm({ ...form, position_applied: e.target.value })} style={input(isDark)} />
             </div>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
             <div>
               <label style={label(isDark)}>Source</label>
               <select value={form.source} onChange={e => setForm({ ...form, source: e.target.value })} style={{ ...input(isDark) }}>
                 {SOURCE_OPTIONS.map(o => <option key={o} value={o} style={{ textTransform:'capitalize' }}>{o}</option>)}
               </select>
             </div>
-          </div>
-          <div>
-            <label style={label(isDark)}>Assign To HR</label>
-            <select value={form.assigned_to} onChange={e => setForm({ ...form, assigned_to: e.target.value })} style={{ ...input(isDark) }}>
-              <option value="">Unassigned</option>
-              {hrUsers.map(hr => (
-                <option key={hr.id || hr._id} value={hr.id || hr._id}>{hr.name}</option>
-              ))}
-            </select>
+            <div>
+              <label style={label(isDark)}>Assign To HR</label>
+              <select value={form.assigned_to} onChange={e => setForm({ ...form, assigned_to: e.target.value })} style={{ ...input(isDark) }}>
+                <option value="">Unassigned</option>
+                {hrUsers.map(hr => (
+                  <option key={hr.id || hr._id} value={hr.id || hr._id}>{hr.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <div>
             <label style={label(isDark)}>Created</label>

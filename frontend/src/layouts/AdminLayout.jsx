@@ -15,10 +15,10 @@ import toast from 'react-hot-toast'
 
 const navItems = [
   { to: '/admin', icon: RiDashboardLine, label: 'Dashboard', end: true },
-  { to: '/admin/monitoring', icon: RiTeamLine, label: 'HR Monitoring' },
-  { to: '/admin/leads', icon: RiContactsLine, label: 'Lead Management' },
+  { to: '/admin/monitoring', icon: RiTeamLine, label: 'Attendance' },
+  { to: '/admin/leads', icon: RiContactsLine, label: 'Lead' },
   { to: '/admin/hr-management', icon: RiUserSettingsLine, label: 'HR Management' },
-  { to: '/admin/tasks', icon: RiTaskLine, label: 'HR Tasks' },
+  { to: '/admin/tasks', icon: RiTaskLine, label: 'Task' },
   { to: '/admin/performance', icon: RiBarChartLine, label: 'Performance' },
   { to: '/admin/reports', icon: RiFileChartLine, label: 'Reports' },
   { to: '/admin/notifications', icon: RiNotification3Line, label: 'Notifications' },

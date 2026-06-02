@@ -88,7 +88,7 @@ export default function AdminTasks() {
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: t.textPrimary, margin: '0 0 4px' }}>HR Tasks</h1>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: t.textPrimary, margin: '0 0 4px' }}>Task</h1>
           <p style={{ color: t.textSecondary, fontSize: '0.875rem', margin: 0 }}>Create tasks and assign them to HR team members</p>
         </div>
         <button onClick={() => { setForm(emptyForm); setShowModal(true) }} style={btnPrimary}>

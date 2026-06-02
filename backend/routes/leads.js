@@ -50,13 +50,15 @@ router.get('/', async (req, res) => {
 
     if (status) query.status = status;
     if (priority) query.priority = priority;
-    if (assigned_to && req.user.role === 'admin') query.assigned_to = assigned_to;
+    if (assigned_to && req.user.role === 'admin') {
+      query.assigned_to = assigned_to === 'unassigned' ? null : assigned_to;
+    }
     if (source) query.source = source;
 
     const total = await Lead.countDocuments(query);
     const leads = await Lead.find(query)
       .populate('assigned_to', 'name avatar')
-      .populate('created_by', 'name')
+      .populate('created_by', 'name role')
       .sort({ created_at: -1 })
       .skip(skip)
       .limit(parseInt(limit))
@@ -71,6 +73,7 @@ router.get('/', async (req, res) => {
         assigned_to_name: l.assigned_to ? l.assigned_to.name : null,
         assigned_to_avatar: l.assigned_to ? l.assigned_to.avatar : null,
         created_by_name: l.created_by ? l.created_by.name : null,
+        lead_source: (l.created_by && l.created_by.role === 'hr') ? 'Own Lead' : 'Admin Lead',
         pending_followups
       };
     }));
