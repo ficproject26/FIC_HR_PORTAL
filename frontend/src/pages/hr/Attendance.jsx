@@ -85,8 +85,47 @@ export default function Attendance() {
       {/* Table */}
       <div style={{ ...card(isDark), padding:0, overflow:'hidden' }}>
         {loading ? <PageLoader /> : (
-          <div style={{ overflowX:'auto' }}>
-            <table style={{ width:'100%', borderCollapse:'collapse' }}>
+          <>
+            <style>{`
+              @media (max-width: 768px) {
+                .table-container { background: transparent !important; box-shadow: none !important; padding: 0 !important; border: none !important; overflow: visible !important; }
+                .responsive-table thead { display: none; }
+                .responsive-table, .responsive-table tbody, .responsive-table tr, .responsive-table td { display: block; width: 100%; box-sizing: border-box; }
+                .responsive-table tr { 
+                  margin-bottom: 12px; 
+                  border: 1px solid ${isDark ? '#334155' : '#e2e8f0'}; 
+                  border-radius: 12px; 
+                  background: ${isDark ? '#1e293b' : '#ffffff'};
+                  overflow: hidden;
+                  box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+                }
+                .responsive-table td { 
+                  display: flex; 
+                  justify-content: space-between; 
+                  align-items: center; 
+                  padding: 8px 12px !important; 
+                  border-bottom: 1px solid ${isDark ? '#334155' : '#e2e8f0'};
+                  text-align: right;
+                  font-size: 0.8rem !important;
+                }
+                .responsive-table td:last-child { border-bottom: none; }
+                .responsive-table td::before { 
+                  content: attr(data-label); 
+                  font-weight: 700; 
+                  font-size: 0.65rem; 
+                  text-transform: uppercase; 
+                  color: ${isDark ? '#94a3b8' : '#64748b'}; 
+                  margin-right: 12px;
+                }
+                .responsive-table td > * {
+                  text-align: right;
+                  margin: 0;
+                  font-size: inherit;
+                }
+              }
+            `}</style>
+            <div className="table-container" style={{ overflowX:'auto' }}>
+              <table className="responsive-table" style={{ width:'100%', borderCollapse:'collapse' }}>
               <thead>
                 <tr>{['Date','Login','Logout','Working Hours','Break','Status'].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr>
               </thead>
@@ -115,22 +154,22 @@ export default function Attendance() {
                     <tr key={i}
                       onMouseEnter={e => e.currentTarget.style.background = isDark ? '#334155' : '#f8fafc'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                      <td style={tdStyle}>{formatDate(r.date)}</td>
-                      <td style={tdStyle}>
+                      <td data-label="Date" style={tdStyle}>{formatDate(r.date)}</td>
+                      <td data-label="Login" style={tdStyle}>
                         <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
                           <RiLoginBoxLine style={{ color:'#10b981', fontSize:'14px' }} />
                           {formatTime(r.login_time)}
                         </div>
                       </td>
-                      <td style={tdStyle}>
+                      <td data-label="Logout" style={tdStyle}>
                         <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
                           <RiLogoutBoxLine style={{ color:'#ef4444', fontSize:'14px' }} />
                           {r.logout_time ? formatTime(r.logout_time) : <span style={{ color:'#f59e0b' }}>Active</span>}
                         </div>
                       </td>
-                      <td style={tdStyle}>{currentWHrs.toFixed(1)}h</td>
-                      <td style={tdStyle}>{currentBreakHrs.toFixed(1)}h</td>
-                      <td style={tdStyle}>
+                      <td data-label="Working Hours" style={tdStyle}>{currentWHrs.toFixed(1)}h</td>
+                      <td data-label="Break" style={tdStyle}>{currentBreakHrs.toFixed(1)}h</td>
+                      <td data-label="Status" style={tdStyle}>
                         <span style={{ padding:'3px 10px', borderRadius:'9999px', fontSize:'0.72rem', fontWeight:'700',
                           background: isPresent ? '#dcfce7' : '#fee2e2',
                           color: isPresent ? '#15803d' : '#b91c1c' }}>
@@ -146,6 +185,7 @@ export default function Attendance() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

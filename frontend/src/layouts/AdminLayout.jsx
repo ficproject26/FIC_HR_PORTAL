@@ -4,7 +4,7 @@ import {
   RiDashboardLine, RiTeamLine, RiUserSettingsLine, RiBarChartLine,
   RiFileChartLine, RiNotification3Line, RiMenuLine, RiCloseLine,
   RiSunLine, RiMoonLine, RiLogoutBoxLine, RiContactsLine,
-  RiShieldUserLine, RiSearchLine, RiTaskLine
+  RiShieldUserLine, RiSearchLine, RiTaskLine, RiBuildingLine
 } from 'react-icons/ri'
 import useAuthStore from '../store/authStore'
 import useThemeStore from '../store/themeStore'
@@ -22,6 +22,7 @@ const navItems = [
   { to: '/admin/performance', icon: RiBarChartLine, label: 'Performance' },
   { to: '/admin/reports', icon: RiFileChartLine, label: 'Reports' },
   { to: '/admin/notifications', icon: RiNotification3Line, label: 'Notifications' },
+  { to: '/admin/branches', icon: RiBuildingLine, label: 'Branches' },
 ]
 
 export default function AdminLayout() {
@@ -67,20 +68,21 @@ export default function AdminLayout() {
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
+          className="mobile-overlay"
           onClick={() => setMobileOpen(false)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 20 }}
         />
       )}
 
       {/* Sidebar */}
-      <aside style={{
+      <aside className={`admin-sidebar ${mobileOpen ? 'mobile-open' : ''}`} style={{
         width: sidebarWidth,
         minWidth: sidebarWidth,
         background: sidebarBg,
         borderRight: `1px solid ${sidebarBorder}`,
         display: 'flex',
         flexDirection: 'column',
-        transition: 'width 0.3s ease',
+        transition: 'width 0.3s ease, transform 0.3s ease',
         overflow: 'hidden',
         zIndex: 30,
         flexShrink: 0,
@@ -111,11 +113,12 @@ export default function AdminLayout() {
 
         {/* Nav */}
         <nav style={{ flex: 1, padding: '12px 8px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          {navItems.map(({ to, icon: Icon, label, end }) => (
+          {navItems.filter(item => item.label !== 'Branches' || user?.role === 'admin').map(({ to, icon: Icon, label, end }) => (
             <NavLink
               key={to}
               to={to}
               end={end}
+              onClick={() => { if (window.innerWidth <= 768) setMobileOpen(false) }}
               style={({ isActive }) => ({
                 display: 'flex', alignItems: 'center', gap: '12px',
                 padding: sidebarOpen ? '10px 12px' : '10px',
@@ -171,18 +174,46 @@ export default function AdminLayout() {
       {/* Main */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
         {/* Topbar */}
-        <header style={{
+        <header className="admin-topbar" style={{
           background: headerBg, borderBottom: `1px solid ${border}`,
           padding: '0 16px', height: '56px', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0,
         }}>
+          <div className="mobile-logo" style={{ display: 'none', alignItems: 'center', gap: '8px', fontWeight: '900', color: '#2563eb', fontSize: '1.1rem', flex: 1, letterSpacing: '-0.5px' }}>
+            <svg width="32" height="32" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style={{ borderRadius: '50%', background: '#fff', flexShrink: 0, boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}>
+              <path d="M 38 28 L 62 28 L 62 32 L 44 32 L 44 48 L 38 48 Z" fill="#2563eb" />
+              <polygon points="53,37 62,48 44,48" fill="#facc15" />
+              <text x="50" y="65" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="11.5" fill="#2563eb" textAnchor="middle">
+                FORGE <tspan fill="#facc15">INDIA</tspan>
+              </text>
+              <text x="50" y="78" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="8" fill="#2563eb" textAnchor="middle" letterSpacing="1px">
+                CONNECT
+              </text>
+            </svg>
+            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+              <div>FORGE <span style={{ color: '#facc15' }}>INDIA</span></div>
+              <div style={{ fontSize: '0.6rem', color: '#2563eb', letterSpacing: '1.5px', fontWeight: '800' }}>CONNECT</div>
+            </div>
+          </div>
           <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="menu-btn header-icon"
+            onClick={() => {
+              if (window.innerWidth <= 768) {
+                setMobileOpen(!mobileOpen)
+              } else {
+                setSidebarOpen(!sidebarOpen)
+              }
+            }}
             style={{ padding: '8px', borderRadius: '8px', border: 'none', background: 'transparent', cursor: 'pointer', color: textSecondary, fontSize: '20px', display: 'flex' }}
           >
-            {sidebarOpen ? <RiCloseLine /> : <RiMenuLine />}
+            <span className="desktop-menu-icon" style={{ display: 'flex' }}>
+              {sidebarOpen ? <RiCloseLine /> : <RiMenuLine />}
+            </span>
+            <span className="mobile-menu-icon" style={{ display: 'none' }}>
+              {mobileOpen ? <RiCloseLine /> : <RiMenuLine />}
+            </span>
           </button>
 
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0 16px' }}>
+          <div className="mobile-hide" style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0 16px' }}>
             <div style={{ position: 'relative', width: '100%', maxWidth: '350px' }}>
               <RiSearchLine style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: textSecondary }} />
               <input 
@@ -196,11 +227,11 @@ export default function AdminLayout() {
             </div>
           </div>
 
-          <button onClick={toggleTheme} style={{ padding: '8px', borderRadius: '8px', border: 'none', background: 'transparent', cursor: 'pointer', color: textSecondary, fontSize: '20px', display: 'flex' }}>
+          <button onClick={toggleTheme} className="header-icon" style={{ padding: '8px', borderRadius: '8px', border: 'none', background: 'transparent', cursor: 'pointer', color: textSecondary, fontSize: '20px', display: 'flex' }}>
             {isDark ? <RiSunLine /> : <RiMoonLine />}
           </button>
 
-          <NavLink to="/admin/notifications" style={{ position: 'relative', padding: '8px', borderRadius: '8px', color: textSecondary, fontSize: '20px', display: 'flex' }}>
+          <NavLink to="/admin/notifications" className="header-icon" style={{ position: 'relative', padding: '8px', borderRadius: '8px', color: textSecondary, fontSize: '20px', display: 'flex' }}>
             <RiNotification3Line />
             {unreadCount > 0 && (
               <span style={{
@@ -211,7 +242,7 @@ export default function AdminLayout() {
             )}
           </NavLink>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0 4px 12px', borderLeft: `1px solid ${border}`, marginLeft: '4px' }}>
+          <div className="mobile-hide" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0 4px 12px', borderLeft: `1px solid ${border}`, marginLeft: '4px' }}>
             <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'linear-gradient(135deg, #2563eb, #4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '0.75rem' }}>
               {getInitials(user?.name)}
             </div>
@@ -221,16 +252,58 @@ export default function AdminLayout() {
             </div>
           </div>
 
-          <button onClick={handleLogout} style={{ padding: '8px', borderRadius: '8px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#ef4444', fontSize: '20px', display: 'flex' }} title="Logout">
+          <button onClick={handleLogout} className="header-icon" style={{ padding: '8px', borderRadius: '8px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#ef4444', fontSize: '20px', display: 'flex' }} title="Logout">
             <RiLogoutBoxLine />
           </button>
         </header>
 
         {/* Page content */}
-        <main style={{ flex: 1, overflowY: 'auto', padding: '24px', background: bg }}>
+        <main className="admin-main-content" style={{ flex: 1, overflowY: 'auto', padding: '24px', background: bg }}>
           <Outlet />
         </main>
       </div>
+      <style>{`
+        @media (max-width: 768px) {
+          .admin-sidebar {
+            position: fixed !important;
+            height: 100vh;
+            transform: translateX(-100%);
+            width: 260px !important;
+            min-width: 260px !important;
+          }
+          .admin-sidebar.mobile-open {
+            transform: translateX(0);
+          }
+          .mobile-hide {
+            display: none !important;
+          }
+          .admin-main-content {
+            padding: 16px !important;
+          }
+          .admin-topbar {
+            padding: 0 8px !important;
+          }
+          .desktop-menu-icon { display: none !important; }
+          .mobile-menu-icon { display: flex !important; }
+          .mobile-logo { display: flex !important; }
+          .menu-btn { order: 99; margin-left: 2px; }
+          .header-icon {
+            font-size: 18px !important;
+            padding: 4px !important;
+          }
+        }
+        @media (min-width: 769px) {
+          .mobile-overlay {
+            display: none !important;
+          }
+          .mobile-menu-icon {
+            display: none !important;
+          }
+          .desktop-menu-icon {
+            display: flex !important;
+          }
+        }
+      `}</style>
     </div>
   )
 }

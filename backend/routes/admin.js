@@ -5,8 +5,23 @@ const User = require('../models/User');
 const Attendance = require('../models/Attendance');
 const Lead = require('../models/Lead');
 const FollowUp = require('../models/FollowUp');
+const LeadActivity = require('../models/LeadActivity');
 const Performance = require('../models/Performance');
+const mongoose = require('mongoose');
 const { authenticate, authorizeAdmin } = require('../middleware/auth');
+const { bumpTodayPerformance } = require('../utils/performanceHelpers');
+
+const getBranchUserIds = async (req) => {
+  if (req.user.role === 'branchadmin' && req.user.branch) {
+    const users = await User.find({ branch: req.user.branch }).select('_id').lean();
+    return users.map(u => u._id);
+  }
+  if (req.user.role === 'admin' && req.query.branch) {
+    const users = await User.find({ branch: req.query.branch }).select('_id').lean();
+    return users.map(u => u._id);
+  }
+  return null;
+};
 
 router.use(authenticate, authorizeAdmin);
 
@@ -21,16 +36,34 @@ router.get('/dashboard', async (req, res) => {
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
+    const branchUserIds = await getBranchUserIds(req);
+    let hrQuery = { role: 'hr', is_active: true };
+    let leadQuery = {};
+    let convertedLeadQuery = { status: 'converted' };
+    let followupQuery = { status: 'pending', scheduled_at: { $lt: new Date() } };
+    let attendanceQuery = { date: { $gte: today, $lt: tomorrow }, login_time: { $ne: null } };
+
+    if (branchUserIds) {
+      hrQuery._id = { $in: branchUserIds };
+      leadQuery.assigned_to = { $in: branchUserIds };
+      convertedLeadQuery.assigned_to = { $in: branchUserIds };
+      followupQuery.user_id = { $in: branchUserIds };
+      attendanceQuery.user_id = { $in: branchUserIds };
+    }
+
     const [hrCount, activeToday, totalLeads, convertedLeads, pendingFollowups] = await Promise.all([
-      User.countDocuments({ role: 'hr', is_active: true }),
-      Attendance.distinct('user_id', { date: { $gte: today, $lt: tomorrow }, login_time: { $ne: null } }).then(docs => docs.length),
-      Lead.countDocuments(),
-      Lead.countDocuments({ status: 'converted' }),
-      FollowUp.countDocuments({ status: 'pending', scheduled_at: { $lt: new Date() } })
+      User.countDocuments(hrQuery),
+      Attendance.distinct('user_id', attendanceQuery).then(docs => docs.length),
+      Lead.countDocuments(leadQuery),
+      Lead.countDocuments(convertedLeadQuery),
+      FollowUp.countDocuments(followupQuery)
     ]);
 
+    let monthlyConvMatch = { status: 'converted', converted_at: { $gte: sixMonthsAgo } };
+    if (branchUserIds) monthlyConvMatch.assigned_to = { $in: branchUserIds };
+
     const monthlyConversions = await Lead.aggregate([
-      { $match: { status: 'converted', converted_at: { $gte: sixMonthsAgo } } },
+      { $match: monthlyConvMatch },
       { 
         $group: {
           _id: {
@@ -50,15 +83,22 @@ router.get('/dashboard', async (req, res) => {
       }}
     ]);
 
+    let pipelineMatch = {};
+    if (branchUserIds) pipelineMatch.assigned_to = { $in: branchUserIds };
+
     // Lead pipeline breakdown by status
     const leadPipeline = await Lead.aggregate([
+      { $match: pipelineMatch },
       { $group: { _id: '$status', count: { $sum: 1 } } },
       { $project: { status: '$_id', count: 1, _id: 0 } }
     ]);
 
+    let rankMatch = { role: 'hr', is_active: true, is_blocked: false };
+    if (branchUserIds) rankMatch._id = { $in: branchUserIds };
+
     // HR performance rankings
     const hrRankingsAgg = await User.aggregate([
-      { $match: { role: 'hr', is_active: true, is_blocked: false } },
+      { $match: rankMatch },
       { 
         $lookup: {
           from: 'leads',
@@ -137,7 +177,15 @@ router.get('/hr-users', async (req, res) => {
     const { page = 1, limit = 10, search = '', status } = req.query;
     const skip = (page - 1) * limit;
 
-    let query = { role: { $in: ['hr', 'admin'] }, is_active: { $ne: false } };
+    const branchUserIds = await getBranchUserIds(req);
+    let query = { is_active: { $ne: false } };
+    
+    if (req.user.role === 'branchadmin') {
+      query.role = 'hr';
+      if (branchUserIds) query._id = { $in: branchUserIds };
+    } else {
+      query.role = { $in: ['hr', 'admin', 'branchadmin'] };
+    }
 
     if (search) {
       query.$or = [
@@ -201,7 +249,7 @@ router.get('/hr-users', async (req, res) => {
 // POST /api/admin/hr-users - Create HR user
 router.post('/hr-users', async (req, res) => {
   try {
-    const { name, email, password, phone, department, designation, role = 'hr' } = req.body;
+    const { name, email, password, phone, department, designation, role = 'hr', branch, aadhar_no, pan_no } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, message: 'Name, email and password required' });
@@ -214,7 +262,8 @@ router.post('/hr-users', async (req, res) => {
 
     const hashed = await bcrypt.hash(password, 10);
     const user = await User.create({
-      name, email, password: hashed, role, phone, department, designation
+      name, email, password: hashed, role, phone, department, designation, aadhar_no, pan_no,
+      branch: req.user.role === 'branchadmin' ? req.user.branch : branch || undefined
     });
 
     const userResponse = {
@@ -234,11 +283,11 @@ router.post('/hr-users', async (req, res) => {
 // PUT /api/admin/hr-users/:id - Update HR user
 router.put('/hr-users/:id', async (req, res) => {
   try {
-    const { name, email, phone, department, designation, is_active, role } = req.body;
+    const { name, email, phone, department, designation, is_active, role, branch, aadhar_no, pan_no } = req.body;
     
     const user = await User.findOneAndUpdate(
       { _id: req.params.id, role: { $in: ['hr', 'admin'] } },
-      { name, email, phone, department, designation, is_active, role },
+      { name, email, phone, department, designation, is_active, role, branch: branch || undefined, aadhar_no, pan_no },
       { new: true, select: '-password' }
     );
 
@@ -319,7 +368,11 @@ router.get('/monitoring', async (req, res) => {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const hrUsers = await User.find({ role: 'hr', is_active: true, is_blocked: false }).lean();
+    const branchUserIds = await getBranchUserIds(req);
+    let hrMatch = { role: 'hr', is_active: true, is_blocked: false };
+    if (branchUserIds) hrMatch._id = { $in: branchUserIds };
+
+    const hrUsers = await User.find(hrMatch).lean();
 
     const data = await Promise.all(hrUsers.map(async (u) => {
       const attendance = await Attendance.findOne({ user_id: u._id, date: { $gte: today, $lt: tomorrow } });
@@ -359,9 +412,20 @@ router.get('/monitoring', async (req, res) => {
   }
 });
 
-function buildAdminLeadFilter(filters = {}) {
+function buildAdminLeadFilter(filters = {}, branchUserIds = null) {
   const { search = '', status, priority, source, unassigned_only } = filters;
   const and = [];
+
+  if (branchUserIds) {
+    // If branch admin, only see leads assigned to their branch's users or unassigned leads
+    and.push({
+      $or: [
+        { assigned_to: { $in: branchUserIds } },
+        { assigned_to: null },
+        { assigned_to: { $exists: false } }
+      ]
+    });
+  }
 
   if (search) {
     and.push({
@@ -393,7 +457,8 @@ router.get('/leads/bulk-assign-preview', async (req, res) => {
       source: req.query.source || '',
       unassigned_only: req.query.unassigned_only,
     };
-    const query = buildAdminLeadFilter(filters);
+    const branchUserIds = await getBranchUserIds(req);
+    const query = buildAdminLeadFilter(filters, branchUserIds);
     const total = await Lead.countDocuments(query);
     res.json({ success: true, total });
   } catch (err) {
@@ -411,7 +476,8 @@ router.post('/leads/bulk-assign', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Add at least one assignment range' });
     }
 
-    const query = buildAdminLeadFilter(filters);
+    const branchUserIds = await getBranchUserIds(req);
+    const query = buildAdminLeadFilter(filters, branchUserIds);
     const leads = await Lead.find(query).sort({ created_at: -1 }).select('_id').lean();
     const total = leads.length;
 
@@ -476,7 +542,11 @@ router.post('/leads/bulk-assign', async (req, res) => {
 // GET /api/admin/pending-followups - List pending followups
 router.get('/pending-followups', async (req, res) => {
   try {
-    const followUps = await FollowUp.find({ status: { $in: ['pending', 'rescheduled'] }, scheduled_at: { $lt: new Date() } })
+    const branchUserIds = await getBranchUserIds(req);
+    let query = { status: { $in: ['pending', 'rescheduled'] }, scheduled_at: { $lt: new Date() } };
+    if (branchUserIds) query.user_id = { $in: branchUserIds };
+
+    const followUps = await FollowUp.find(query)
       .populate('lead_id', 'name phone email company status')
       .populate('user_id', 'name email')
       .sort({ scheduled_at: 1 })
@@ -522,8 +592,9 @@ const ALL_BADGES = [
 // GET /api/admin/hr-consultant/:id - Detailed HR Consultant Stats
 router.get('/hr-consultant/:id', async (req, res) => {
   try {
+    const FollowUp = require('../models/FollowUp');
     const hrId = req.params.id;
-    const user = await User.findById(hrId).select('-password');
+    const user = await User.findById(hrId).populate('branch').select('-password');
     if (!user) return res.status(404).json({ success: false, message: 'HR not found' });
 
     const leads = await Lead.find({ assigned_to: hrId });
@@ -539,6 +610,8 @@ router.get('/hr-consultant/:id', async (req, res) => {
 
     const Performance = require('../models/Performance');
     const performances = await Performance.find({ user_id: hrId }).sort({ date: -1 }).limit(10);
+
+    const followUps = await FollowUp.find({ user_id: hrId }).populate('lead_id', 'name phone email').sort({ scheduled_at: -1 }).limit(50);
 
     const userBadges = user.badges || [];
     const mappedBadges = ALL_BADGES.map(b => ({
@@ -570,9 +643,46 @@ router.get('/hr-consultant/:id', async (req, res) => {
         },
         badges: mappedBadges,
         attendances: attendances.sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 10),
-        performances
+        performances,
+        followUps
       }
     });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// POST /api/admin/hr-consultant/:id/allocate-leads
+router.post('/hr-consultant/:id/allocate-leads', async (req, res) => {
+  try {
+    const hrId = req.params.id;
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ message: 'No text provided' });
+    
+    const lines = text.split('\n');
+    let leadsToInsert = [];
+    
+    for (let line of lines) {
+      if (!line.trim()) continue;
+      const parts = line.split(',');
+      if (parts.length >= 2) {
+        leadsToInsert.push({
+          name: parts[0].trim(),
+          phone: parts[1].trim(),
+          assigned_to: hrId,
+          source: 'manual',
+          status: 'new',
+          priority: 'medium'
+        });
+      }
+    }
+    
+    if (leadsToInsert.length > 0) {
+      await Lead.insertMany(leadsToInsert);
+    }
+    
+    res.json({ success: true, message: `Allocated ${leadsToInsert.length} leads successfully` });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -602,6 +712,128 @@ router.put('/hr-consultant/:id/toggle-badge', async (req, res) => {
     await user.save();
 
     res.json({ success: true, badges: user.badges });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// PUT /api/admin/follow-ups/:id - Update follow-up
+router.put('/follow-ups/:id', async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid follow-up id' });
+    }
+
+    const { status, notes, outcome, scheduled_at, language_spoken } = req.body;
+    const followUpId = new mongoose.Types.ObjectId(req.params.id);
+
+    const existing = await FollowUp.findById(followUpId);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Follow-up not found' });
+    }
+    const hrUserId = existing.user_id;
+
+    const update = {
+      notes: notes !== undefined && notes !== '' ? notes : null,
+      outcome: outcome !== undefined && outcome !== '' ? outcome : null,
+    };
+
+    let leadStatusToSet = null;
+    const FOLLOWUP_LEAD_STATUS = {
+      converted: 'converted',
+      not_interested: 'not_interested',
+      exemption: 'exemption',
+    };
+
+    if (status === 'rescheduled') {
+      if (!scheduled_at) {
+        return res.status(400).json({ success: false, message: 'Please select a new date and time to reschedule' });
+      }
+      update.status = 'rescheduled';
+      const parsedSchedule = new Date(scheduled_at);
+      if (Number.isNaN(parsedSchedule.getTime())) {
+        return res.status(400).json({ success: false, message: 'Invalid date and time' });
+      }
+      if (existing.scheduled_at && Math.abs(parsedSchedule.getTime() - new Date(existing.scheduled_at).getTime()) < 60000) {
+        return res.status(400).json({ success: false, message: 'Choose a different date or time than the current schedule' });
+      }
+      update.scheduled_at = parsedSchedule;
+      update.completed_at = null;
+    } else if (status === 'converted' || status === 'not_interested' || status === 'exemption') {
+      leadStatusToSet = FOLLOWUP_LEAD_STATUS[status];
+      update.status = 'completed';
+      update.completed_at = new Date();
+      update.outcome = outcome || (status === 'converted' ? 'Converted' : status === 'exemption' ? 'Exemption' : 'Not interested');
+    } else if (status === 'completed') {
+      update.status = 'completed';
+      update.completed_at = new Date();
+    } else if (status === 'missed') {
+      update.status = 'missed';
+      update.completed_at = new Date();
+    } else if (status) {
+      update.status = status;
+    }
+
+    const followUp = await FollowUp.findByIdAndUpdate(
+      followUpId,
+      update,
+      { new: true, runValidators: true }
+    ).populate('lead_id', 'name phone email company status');
+
+    if (status === 'completed' || status === 'converted' || status === 'not_interested' || status === 'exemption') {
+      const inc = { follow_ups_completed: 1, leads_contacted: 1 };
+      const fuType = followUp.type || existing.type;
+      if (['call', 'whatsapp'].includes(fuType)) {
+        inc.calls_made = 1;
+      }
+      if (status === 'converted') {
+        inc.leads_converted = 1;
+      }
+      await bumpTodayPerformance(hrUserId, inc);
+
+      if (leadStatusToSet && followUp.lead_id) {
+        const leadId = followUp.lead_id._id || followUp.lead_id;
+        const leadUpdate = { status: leadStatusToSet };
+        if (status === 'converted') {
+          leadUpdate.converted_at = new Date();
+        }
+        if (status === 'exemption' && language_spoken) {
+          leadUpdate.language_spoken = language_spoken;
+        }
+        const oldLead = await Lead.findById(leadId).select('status').lean();
+        await Lead.findByIdAndUpdate(leadId, leadUpdate);
+        if (oldLead && oldLead.status !== leadStatusToSet) {
+          try {
+            await LeadActivity.create({
+              lead_id: leadId,
+              user_id: hrUserId,
+              action: 'status_changed',
+              description: `Status changed from ${oldLead.status} to ${leadStatusToSet} (follow-up via admin)`,
+              old_status: oldLead.status,
+              new_status: leadStatusToSet,
+            });
+          } catch (activityErr) {
+            console.warn('Lead activity log failed:', activityErr.message);
+          }
+        }
+      }
+    }
+
+    if (status === 'rescheduled' && followUp.lead_id) {
+      try {
+        await LeadActivity.create({
+          lead_id: followUp.lead_id,
+          user_id: hrUserId,
+          action: 'follow_up_rescheduled',
+          description: `Follow-up rescheduled to ${new Date(scheduled_at).toLocaleString()} (via admin)`,
+        });
+      } catch (activityErr) {
+        console.warn('Lead activity log failed:', activityErr.message);
+      }
+    }
+
+    res.json({ success: true, data: followUp, message: 'Follow-up updated' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Server error' });

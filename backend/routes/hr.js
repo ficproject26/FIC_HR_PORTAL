@@ -12,6 +12,7 @@ const { bumpTodayPerformance } = require('../utils/performanceHelpers');
 const FOLLOWUP_LEAD_STATUS = {
   converted: 'converted',
   not_interested: 'not_interested',
+  exemption: 'exemption',
 };
 
 router.use(authenticate);
@@ -143,7 +144,7 @@ router.put('/follow-ups/:id', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid follow-up id' });
     }
 
-    const { status, notes, outcome, scheduled_at } = req.body;
+    const { status, notes, outcome, scheduled_at, language_spoken } = req.body;
     const userId = new mongoose.Types.ObjectId(req.user.id);
     const followUpId = new mongoose.Types.ObjectId(req.params.id);
 
@@ -182,11 +183,11 @@ router.put('/follow-ups/:id', async (req, res) => {
       }
       update.scheduled_at = parsedSchedule;
       update.completed_at = null;
-    } else if (status === 'converted' || status === 'not_interested') {
+    } else if (status === 'converted' || status === 'not_interested' || status === 'exemption') {
       leadStatusToSet = FOLLOWUP_LEAD_STATUS[status];
       update.status = 'completed';
       update.completed_at = new Date();
-      update.outcome = outcome || (status === 'converted' ? 'Converted' : 'Not interested');
+      update.outcome = outcome || (status === 'converted' ? 'Converted' : status === 'exemption' ? 'Exemption' : 'Not interested');
     } else if (status === 'completed') {
       update.status = 'completed';
       update.completed_at = new Date();
@@ -203,7 +204,7 @@ router.put('/follow-ups/:id', async (req, res) => {
       { new: true, runValidators: true }
     ).populate('lead_id', 'name phone email company status');
 
-    if (status === 'completed' || status === 'converted' || status === 'not_interested') {
+    if (status === 'completed' || status === 'converted' || status === 'not_interested' || status === 'exemption') {
       const inc = { follow_ups_completed: 1, leads_contacted: 1 };
       const fuType = followUp.type || existing.type;
       if (['call', 'whatsapp'].includes(fuType)) {
@@ -219,6 +220,9 @@ router.put('/follow-ups/:id', async (req, res) => {
         const leadUpdate = { status: leadStatusToSet };
         if (status === 'converted') {
           leadUpdate.converted_at = new Date();
+        }
+        if (status === 'exemption' && language_spoken) {
+          leadUpdate.language_spoken = language_spoken;
         }
         const oldLead = await Lead.findById(leadId).select('status').lean();
         await Lead.findByIdAndUpdate(leadId, leadUpdate);

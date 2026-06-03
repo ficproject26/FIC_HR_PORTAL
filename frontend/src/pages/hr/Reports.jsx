@@ -102,14 +102,36 @@ export default function Reports() {
         <p style={{ color:t.textSecondary, fontSize:'0.875rem', margin:0 }}>Your performance & lead analytics (live data)</p>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'14px', marginBottom:'24px' }}>
+      <style>{`
+        .kpi-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 14px;
+          margin-bottom: 24px;
+        }
+        .charts-grid {
+          display: grid;
+          grid-template-columns: 1.6fr 1fr;
+          gap: 20px;
+          margin-bottom: 24px;
+        }
+        @media (max-width: 768px) {
+          .kpi-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          .charts-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+      <div className="kpi-grid">
         <KPI label="Total Leads" value={total} color="#3b82f6" icon={RiContactsLine} />
         <KPI label="Converted" value={converted} sub={`${convRate}% rate`} color="#10b981" icon={RiCheckboxCircleLine} />
         <KPI label="Pending Follow-ups" value={stats.pendingFollowups || 0} color="#f59e0b" icon={RiCalendarCheckLine} />
         <KPI label="Calls Made Today" value={stats.todayPerformance?.calls_made || 0} color="#8b5cf6" icon={RiPhoneLine} />
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'1.6fr 1fr', gap:'20px', marginBottom:'24px' }}>
+      <div className="charts-grid">
         <div style={card(isDark)}>
           <h3 style={{ fontSize:'0.95rem', fontWeight:'700', color:t.textPrimary, margin:'0 0 20px' }}>Weekly Performance</h3>
           {hasWeeklyActivity ? (

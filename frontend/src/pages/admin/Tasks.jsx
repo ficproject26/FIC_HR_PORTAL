@@ -85,19 +85,34 @@ export default function AdminTasks() {
   const tabs = ['all', 'pending', 'in_progress', 'completed']
 
   return (
-    <div style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", maxWidth: '100vw', overflowX: 'hidden' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .header-container { flex-direction: column !important; align-items: stretch !important; gap: 16px !important; }
+          .assign-task-btn { width: 100% !important; min-height: 48px !important; justify-content: center !important; }
+          .hr-filter-container { width: 100% !important; margin-bottom: 24px !important; }
+          .hr-filter-select { width: 100% !important; max-width: 100% !important; }
+          .tabs-container { margin-bottom: 24px !important; }
+          .tab-btn { flex: 1 1 calc(50% - 4px); min-height: 44px; display: flex; align-items: center; justify-content: center; }
+          .task-card-inner { flex-direction: column !important; align-items: flex-start !important; gap: 16px !important; }
+          .task-card-title-container { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; }
+          .badge-container { display: flex; gap: 8px; flex-wrap: wrap; }
+          .task-card-actions { width: 100%; justify-content: space-between !important; margin-top: 4px; border-top: 1px solid ${isDark ? '#334155' : '#e2e8f0'}; padding-top: 16px; }
+          .empty-state-container { padding: 48px 16px !important; }
+        }
+      `}</style>
+      <div className="header-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: t.textPrimary, margin: '0 0 4px' }}>Task</h1>
           <p style={{ color: t.textSecondary, fontSize: '0.875rem', margin: 0 }}>Create tasks and assign them to HR team members</p>
         </div>
-        <button onClick={() => { setForm(emptyForm); setShowModal(true) }} style={btnPrimary}>
+        <button className="assign-task-btn" onClick={() => { setForm(emptyForm); setShowModal(true) }} style={btnPrimary}>
           <RiAddLine /> Assign Task
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
-        <select value={hrFilter} onChange={(e) => { setHrFilter(e.target.value); setPage(1) }} style={{ ...input(isDark), width: 'auto', minWidth: '180px' }}>
+      <div className="hr-filter-container" style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <select className="hr-filter-select" value={hrFilter} onChange={(e) => { setHrFilter(e.target.value); setPage(1) }} style={{ ...input(isDark), width: 'auto', minWidth: '180px' }}>
           <option value="">All HR users</option>
           {hrUsers.map((hr) => (
             <option key={hr.id} value={hr.id}>{hr.name}</option>
@@ -105,12 +120,13 @@ export default function AdminTasks() {
         </select>
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+      <div className="tabs-container" style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
         {tabs.map((tab) => {
           const isActive = filter === tab || (tab === 'all' && !filter)
           return (
             <button
               key={tab}
+              className="tab-btn"
               onClick={() => { setFilter(tab === 'all' ? '' : tab); setPage(1) }}
               style={{
                 padding: '8px 18px',
@@ -142,23 +158,25 @@ export default function AdminTasks() {
                 padding: '16px 20px',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
-                    <span style={{ fontWeight: '700', color: t.textPrimary }}>{task.title}</span>
-                    <PriorityBadge priority={task.priority} />
-                    <StatusBadge status={task.status} />
+              <div className="task-card-inner" style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+                <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
+                  <div className="task-card-title-container" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                    <span style={{ fontWeight: '700', color: t.textPrimary, wordBreak: 'break-word' }}>{task.title}</span>
+                    <div className="badge-container">
+                      <PriorityBadge priority={task.priority} />
+                      <StatusBadge status={task.status} />
+                    </div>
                   </div>
                   {task.description && (
-                    <p style={{ fontSize: '0.8rem', color: t.textSecondary, margin: '0 0 6px' }}>{task.description}</p>
+                    <p style={{ fontSize: '0.8rem', color: t.textSecondary, margin: '0 0 12px', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{task.description}</p>
                   )}
                   <p style={{ fontSize: '0.75rem', color: '#3b82f6', margin: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <RiUserLine /> Assigned to: <strong>{task.assigned_to_name || '—'}</strong>
+                    <RiUserLine /> Assigned to: <strong style={{ wordBreak: 'break-word' }}>{task.assigned_to_name || '—'}</strong>
                   </p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div className="task-card-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
                   {task.due_date && (
-                    <span style={{ fontSize: '0.75rem', color: t.textSecondary, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                    <span style={{ fontSize: '0.75rem', color: t.textSecondary, display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <RiTimeLine /> {formatDateTime(task.due_date)}
                     </span>
                   )}
@@ -174,8 +192,9 @@ export default function AdminTasks() {
           ))}
 
           {tasks.length === 0 && (
-            <div style={{ ...card(isDark), textAlign: 'center', padding: '64px 24px' }}>
-              <p style={{ color: t.textSecondary, margin: 0 }}>No tasks yet. Click &quot;Assign Task&quot; to add one for HR.</p>
+            <div className="empty-state-container" style={{ ...card(isDark), textAlign: 'center', padding: '64px 24px' }}>
+              <div style={{ fontSize: '48px', color: isDark ? '#334155' : '#cbd5e1', marginBottom: '16px', display: 'flex', justifyContent: 'center' }}><RiAddLine /></div>
+              <p style={{ color: t.textSecondary, margin: 0, fontSize: '0.875rem' }}>No tasks yet. Click &quot;Assign Task&quot; to add one for HR.</p>
             </div>
           )}
           <Pagination pagination={pagination} onPageChange={setPage} />

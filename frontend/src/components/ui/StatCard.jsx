@@ -11,13 +11,14 @@ const colorMap = {
   teal:   { bg: 'linear-gradient(135deg, #f0fdfa, #ccfbf1)', iconBg: '#ffffff', color: '#0f766e', darkBg: 'linear-gradient(135deg, rgba(19,78,74,0.2), rgba(19,78,74,0.4))', darkIconBg: 'rgba(20,184,166,0.25)', darkColor: '#2dd4bf' },
 }
 
-export default function StatCard({ icon: Icon, label, value, sub, color = 'blue', trend, onClick }) {
+export default function StatCard({ icon: Icon, label, value, sub, color = 'blue', trend, onClick, className = '' }) {
   const { isDark } = useThemeStore()
   const c = colorMap[color] || colorMap.blue
   const [hovered, setHovered] = React.useState(false)
 
   return (
     <div 
+      className={`stat-card ${className}`}
       onClick={onClick}
       onMouseEnter={() => onClick && setHovered(true)}
       onMouseLeave={() => onClick && setHovered(false)}
@@ -34,18 +35,18 @@ export default function StatCard({ icon: Icon, label, value, sub, color = 'blue'
         transform: hovered ? 'translateY(-3px)' : 'translateY(0)',
       }}
     >
-      <div style={{
+      <div className="stat-card-icon-wrapper" style={{
         width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
         background: isDark ? c.darkIconBg : c.iconBg,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.06)'
       }}>
-        <Icon style={{ fontSize: '20px', color: isDark ? c.darkColor : c.color }} />
+        <Icon className="stat-card-icon" style={{ fontSize: '20px', color: isDark ? c.darkColor : c.color }} />
       </div>
       <div style={{ width: '100%' }}>
-        <p style={{ fontSize: '0.78rem', color: isDark ? '#cbd5e1' : c.color, opacity: 0.85, fontWeight: '700', margin: '0 0 6px', whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</p>
+        <p className="stat-card-label" style={{ fontSize: '0.78rem', color: isDark ? '#cbd5e1' : c.color, opacity: 0.85, fontWeight: '700', margin: '0 0 6px', whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</p>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-          <p style={{ fontSize: '2rem', fontWeight: '800', color: isDark ? c.darkColor : c.color, margin: 0, lineHeight: 1 }}>{value ?? '—'}</p>
+          <p className="stat-card-value" style={{ fontSize: '2rem', fontWeight: '800', color: isDark ? c.darkColor : c.color, margin: 0, lineHeight: 1 }}>{value ?? '—'}</p>
           {trend !== undefined && (
             <div style={{
               padding: '4px 8px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: '700',

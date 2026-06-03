@@ -9,6 +9,7 @@ import { PageLoader } from '../../components/ui/LoadingSpinner'
 import { formatDate, debounce } from '../../utils/helpers'
 import useThemeStore from '../../store/themeStore'
 import { card, getTheme, btnPrimary, btnSecondary, input, label } from '../../utils/styles'
+import useAuthStore from '../../store/authStore'
 import toast from 'react-hot-toast'
 
 const STATUS_OPTIONS = ['new', 'followup', 'exemption', 'converted', 'not_interested', 'contacted', 'qualified', 'proposal', 'negotiation', 'lost']
@@ -39,13 +40,22 @@ export default function AdminLeads() {
   const [saving, setSaving] = useState(false)
   const [uploadFile, setUploadFile] = useState(null)
   const [hrUsers, setHrUsers] = useState([])
+  const [branches, setBranches] = useState([])
+  const [selectedBranch, setSelectedBranch] = useState('')
   const { isDark } = useThemeStore()
+  const { user } = useAuthStore()
   const t = getTheme(isDark)
 
   const [selectedHrView, setSelectedHrView] = useState(null)
   const [dashboardStats, setDashboardStats] = useState(null)
 
-  useEffect(() => { fetchHRUsers(); fetchDashboardStats(); }, [])
+  useEffect(() => { 
+    fetchHRUsers(); 
+    if (user?.role === 'admin' || user?.role === 'superadmin') {
+      api.get('/branches?limit=100').then(res => setBranches(res.data.data)).catch(e => console.error(e))
+    }
+  }, [user?.role])
+  useEffect(() => { fetchDashboardStats() }, [selectedBranch])
   useEffect(() => { fetchLeads() }, [page, filters, selectedHrView])
 
   const debouncedFetch = useCallback(debounce(() => { setPage(1); fetchLeads() }, 400), [search, filters, selectedHrView])
@@ -53,7 +63,8 @@ export default function AdminLeads() {
 
   const fetchDashboardStats = async () => {
     try {
-      const res = await api.get('/admin/dashboard')
+      const url = selectedBranch ? `/admin/dashboard?branch=${selectedBranch}` : '/admin/dashboard'
+      const res = await api.get(url)
       setDashboardStats(res.data.data)
     } catch (e) {}
   }
@@ -262,7 +273,27 @@ export default function AdminLeads() {
       </div>
 
       {!selectedHrView ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+        <>
+          {(user?.role === 'admin' || user?.role === 'superadmin') && branches.length > 0 && (
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '8px', WebkitOverflowScrolling: 'touch' }}>
+              <button 
+                onClick={() => setSelectedBranch('')} 
+                style={{ ...btnSecondary(isDark), background: selectedBranch === '' ? (isDark ? '#3b82f6' : '#2563eb') : 'transparent', color: selectedBranch === '' ? '#fff' : t.textPrimary, border: `1px solid ${selectedBranch === '' ? 'transparent' : t.border}`, borderRadius: '20px', padding: '6px 16px', fontSize: '0.85rem' }}
+              >
+                All Branches
+              </button>
+              {branches.map(b => (
+                <button 
+                  key={b.id || b._id} 
+                  onClick={() => setSelectedBranch(b.id || b._id)} 
+                  style={{ ...btnSecondary(isDark), background: selectedBranch === (b.id || b._id) ? (isDark ? '#3b82f6' : '#2563eb') : 'transparent', color: selectedBranch === (b.id || b._id) ? '#fff' : t.textPrimary, border: `1px solid ${selectedBranch === (b.id || b._id) ? 'transparent' : t.border}`, borderRadius: '20px', padding: '6px 16px', whiteSpace: 'nowrap', fontSize: '0.85rem' }}
+                >
+                  {b.name}
+                </button>
+              ))}
+            </div>
+          )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px', marginBottom: '24px' }}>
           <div 
             onClick={() => setSelectedHrView('unassigned')}
             style={{
@@ -323,6 +354,7 @@ export default function AdminLeads() {
             </div>
           ))}
         </div>
+        </>
       ) : (
         <>
           {/* Filters */}
@@ -341,11 +373,50 @@ export default function AdminLeads() {
           </div>
 
           {/* Table */}
-      <div style={{ ...card(isDark), padding:0, overflow:'hidden' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .table-container { background: transparent !important; box-shadow: none !important; padding: 0 !important; border: none !important; overflow: visible !important; }
+          .responsive-table thead { display: none; }
+          .responsive-table, .responsive-table tbody, .responsive-table tr, .responsive-table td { display: block; width: 100%; box-sizing: border-box; }
+          .responsive-table tr { 
+            margin-bottom: 12px; 
+            border: 1px solid ${isDark ? '#334155' : '#e2e8f0'}; 
+            border-radius: 12px; 
+            background: ${isDark ? '#1e293b' : '#ffffff'};
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+          }
+          .responsive-table td { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 8px 12px !important; 
+            border-bottom: 1px solid ${isDark ? '#334155' : '#e2e8f0'};
+            text-align: right;
+            font-size: 0.8rem !important;
+          }
+          .responsive-table td:last-child { border-bottom: none; }
+          .responsive-table td::before { 
+            content: attr(data-label); 
+            font-weight: 700; 
+            font-size: 0.65rem; 
+            text-transform: uppercase; 
+            color: ${isDark ? '#94a3b8' : '#64748b'}; 
+            margin-right: 12px;
+          }
+          .responsive-table td > * {
+            text-align: right;
+            margin: 0;
+            font-size: inherit;
+          }
+          .action-buttons { justify-content: flex-end; width: 100%; }
+        }
+      `}</style>
+      <div className="table-container" style={{ ...card(isDark), padding:0, overflow:'hidden' }}>
         {loading ? <PageLoader /> : (
           <>
             <div style={{ overflowX:'auto' }}>
-              <table style={{ width:'100%', borderCollapse:'collapse' }}>
+              <table className="responsive-table" style={{ width:'100%', borderCollapse:'collapse' }}>
                 <thead>
                   <tr>{['Lead','Contact','Priority','Position Applied','Assigned To','Origin','Created','Status','Actions'].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr>
                 </thead>
@@ -354,26 +425,26 @@ export default function AdminLeads() {
                     <tr key={lead.id || lead._id}
                       onMouseEnter={e => e.currentTarget.style.background = isDark ? '#334155' : '#f8fafc'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                      <td style={tdStyle}>
+                      <td data-label="Lead" style={tdStyle}>
                         <p style={{ fontWeight:'600', margin:0 }}>{lead.name}</p>
                       </td>
-                      <td style={tdStyle}>
+                      <td data-label="Contact" style={tdStyle}>
                         {lead.phone ? (
-                          <>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                             <p style={{ margin:0 }}>{lead.phone}</p>
                             {lead.email && (
                               <p style={{ fontSize:'0.75rem', color:t.textSecondary, margin:'2px 0 0' }}>{lead.email}</p>
                             )}
-                          </>
+                          </div>
                         ) : lead.email ? (
                           <p style={{ margin:0 }}>{lead.email}</p>
                         ) : (
                           <span style={{ color:t.textMuted }}>—</span>
                         )}
                       </td>
-                      <td style={tdStyle}><PriorityBadge priority={lead.priority} /></td>
-                      <td style={{ ...tdStyle, fontSize:'0.8rem' }}>{lead.position_applied || '—'}</td>
-                      <td style={{ ...tdStyle, minWidth:'160px' }}>
+                      <td data-label="Priority" style={tdStyle}><PriorityBadge priority={lead.priority} /></td>
+                      <td data-label="Position Applied" style={{ ...tdStyle, fontSize:'0.8rem' }}>{lead.position_applied || '—'}</td>
+                      <td data-label="Assigned To" style={{ ...tdStyle, minWidth:'160px' }}>
                         <select
                           value={getAssignedId(lead)}
                           onChange={e => handleAssign(lead, e.target.value)}
@@ -385,7 +456,7 @@ export default function AdminLeads() {
                           ))}
                         </select>
                       </td>
-                      <td style={{ ...tdStyle }}>
+                      <td data-label="Origin" style={{ ...tdStyle }}>
                         <span style={{ 
                           padding: '4px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '600',
                           background: lead.lead_source === 'Own Lead' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
@@ -395,10 +466,10 @@ export default function AdminLeads() {
                           {lead.lead_source || 'Admin Lead'}
                         </span>
                       </td>
-                      <td style={{ ...tdStyle, fontSize:'0.78rem', color:t.textSecondary }}>{formatDate(lead.created_at)}</td>
-                      <td style={tdStyle}><StatusBadge status={lead.status} /></td>
-                      <td style={tdStyle}>
-                        <div style={{ display:'flex', gap:'4px' }}>
+                      <td data-label="Created" style={{ ...tdStyle, fontSize:'0.78rem', color:t.textSecondary }}>{formatDate(lead.created_at)}</td>
+                      <td data-label="Status" style={tdStyle}><StatusBadge status={lead.status} /></td>
+                      <td data-label="Actions" style={tdStyle}>
+                        <div className="action-buttons" style={{ display:'flex', gap:'4px' }}>
                           <button onClick={() => openEdit(lead)} style={{ padding:'6px', borderRadius:'8px', border:'none', background:'transparent', cursor:'pointer', color:'#3b82f6', fontSize:'16px', display:'flex' }}><RiEditLine /></button>
                           <button onClick={() => handleDelete(lead.id || lead._id)} style={{ padding:'6px', borderRadius:'8px', border:'none', background:'transparent', cursor:'pointer', color:'#ef4444', fontSize:'16px', display:'flex' }}><RiDeleteBinLine /></button>
                         </div>

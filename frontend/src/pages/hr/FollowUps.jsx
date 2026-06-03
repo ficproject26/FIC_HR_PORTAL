@@ -7,6 +7,7 @@ import { StatusBadge } from '../../components/ui/Badge'
 import Modal from '../../components/ui/Modal'
 import { formatDateTime, timeAgo, localDatetimeToISO } from '../../utils/helpers'
 import useThemeStore from '../../store/themeStore'
+import useAuthStore from '../../store/authStore'
 import { card, getTheme, btnPrimary, btnSecondary, input, label } from '../../utils/styles'
 import toast from 'react-hot-toast'
 
@@ -19,6 +20,7 @@ const defaultForm = () => ({
   notes: '',
   scheduleDate: '',
   scheduleTime: '10:00',
+  language_spoken: '',
 })
 
 const pad2 = (n) => String(n).padStart(2, '0')
@@ -47,7 +49,9 @@ export default function HRFollowUps() {
   const [form, setForm] = useState(defaultForm())
   const [saving, setSaving] = useState(false)
   const { isDark } = useThemeStore()
+  const { user } = useAuthStore()
   const t = getTheme(isDark)
+  const isKrishnagiri = user?.branch?.name?.toLowerCase() === 'krishnagiri'
 
   useEffect(() => { fetchFollowUps() }, [page, filter])
 
@@ -65,9 +69,10 @@ export default function HRFollowUps() {
     setSelected(fu)
     const rescheduleDefaults = defaultRescheduleDate(fu.scheduled_at)
     setForm({
-      status: 'completed',
+      status: isKrishnagiri ? 'not_interested' : 'completed',
       outcome: '',
       notes: fu.notes || '',
+      language_spoken: '',
       ...rescheduleDefaults,
     })
     setShowModal(true)
@@ -105,6 +110,9 @@ export default function HRFollowUps() {
         notes: form.notes,
         outcome: form.outcome,
       }
+      if (form.status === 'exemption' && form.language_spoken) {
+        payload.language_spoken = form.language_spoken
+      }
       if (form.status === 'rescheduled') {
         payload.scheduled_at = buildRescheduleISO()
       }
@@ -141,11 +149,13 @@ export default function HRFollowUps() {
 
   const isMissed = (fu) => new Date(fu.scheduled_at) < new Date() && ['pending', 'rescheduled'].includes(fu.status)
 
-  const tabs = ['all', 'pending', 'missed', 'completed']
+  const allTabs = ['all', 'pending', 'missed', 'completed']
+  const tabs = isKrishnagiri ? allTabs.filter(t => t !== 'completed') : allTabs
   const submitLabel =
     form.status === 'rescheduled' ? 'Reschedule'
       : form.status === 'completed' ? 'Mark Complete'
       : form.status === 'converted' ? 'Mark Converted'
+      : form.status === 'exemption' ? 'Mark Exemption'
       : form.status === 'not_interested' ? 'Mark Not Interested'
       : 'Save'
 
@@ -176,9 +186,51 @@ export default function HRFollowUps() {
       </div>
 
       {loading ? <PageLoader /> : (
-        <div style={{ ...card(isDark), padding:0, overflow:'hidden' }}>
-          <div style={{ overflowX:'auto' }}>
-            <table style={{ width:'100%', borderCollapse:'collapse' }}>
+        <>
+          <style>{`
+            .cell-content { align-items: flex-start; text-align: left; }
+            @media (max-width: 768px) {
+              .table-container { background: transparent !important; box-shadow: none !important; padding: 0 !important; border: none !important; overflow: visible !important; }
+              .responsive-table thead { display: none; }
+              .responsive-table, .responsive-table tbody, .responsive-table tr, .responsive-table td { display: block; width: 100%; box-sizing: border-box; }
+              .responsive-table tr { 
+                margin-bottom: 12px; 
+                border: 1px solid ${isDark ? '#334155' : '#e2e8f0'}; 
+                border-radius: 12px; 
+                background: ${isDark ? '#1e293b' : '#ffffff'};
+                overflow: hidden;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+              }
+              .responsive-table td { 
+                display: flex; 
+                justify-content: space-between; 
+                align-items: center; 
+                padding: 8px 12px !important; 
+                border-bottom: 1px solid ${isDark ? '#334155' : '#e2e8f0'};
+                text-align: right;
+                font-size: 0.8rem !important;
+              }
+              .responsive-table td:last-child { border-bottom: none; }
+              .responsive-table td::before { 
+                content: attr(data-label); 
+                font-weight: 700; 
+                font-size: 0.65rem; 
+                text-transform: uppercase; 
+                color: ${isDark ? '#94a3b8' : '#64748b'}; 
+                margin-right: 12px;
+              }
+              .responsive-table td > * {
+                text-align: right;
+                margin: 0;
+                font-size: inherit;
+              }
+              .cell-content { align-items: flex-end !important; text-align: right !important; }
+              .action-buttons { justify-content: flex-end; width: 100%; }
+            }
+          `}</style>
+          <div className="table-container" style={{ ...card(isDark), padding:0, overflow:'hidden' }}>
+            <div style={{ overflowX:'auto' }}>
+              <table className="responsive-table" style={{ width:'100%', borderCollapse:'collapse' }}>
               <thead>
                 <tr>
                   {['Lead Name', 'Phone No', 'Position Applied', 'Schedule / Type', 'Status', 'Notes', 'Action'].map(h => (
@@ -196,45 +248,53 @@ export default function HRFollowUps() {
                     <tr key={rowKey}
                       onMouseEnter={e => e.currentTarget.style.background = isDark ? '#334155' : '#f8fafc'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                      <td style={tdStyle}>
+                      <td data-label="Lead Name" style={tdStyle}>
                         <p style={{ fontWeight:'600', margin: fu.lead_company ? '0 0 2px' : 0 }}>{fu.lead_name}</p>
                         {fu.lead_company && (
                           <p style={{ fontSize:'0.75rem', color:t.textSecondary, margin:0 }}>{fu.lead_company}</p>
                         )}
                       </td>
-                      <td style={tdStyle}>
-                        <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-                          <RiPhoneLine style={{ color:'#10b981', fontSize:'14px', flexShrink:0 }} />
-                          <span>{fu.lead_phone || '—'}</span>
+                      <td data-label="Phone No" style={tdStyle}>
+                        <div className="cell-content" style={{ display: 'flex', flexDirection: 'column' }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+                            <RiPhoneLine style={{ color:'#10b981', fontSize:'14px', flexShrink:0 }} />
+                            <span>{fu.lead_phone || '—'}</span>
+                          </div>
+                          {fu.lead_email && (
+                            <p style={{ fontSize:'0.72rem', color:t.textSecondary, margin:'2px 0 0', paddingLeft:'20px' }}>{fu.lead_email}</p>
+                          )}
                         </div>
-                        {fu.lead_email && (
-                          <p style={{ fontSize:'0.72rem', color:t.textSecondary, margin:'2px 0 0', paddingLeft:'20px' }}>{fu.lead_email}</p>
-                        )}
                       </td>
-                      <td style={tdStyle}>{fu.lead_position_applied || '—'}</td>
-                      <td style={tdStyle}>
-                        <div style={{ display:'flex', alignItems:'center', gap:'6px', marginBottom:'4px' }}>
-                          <TypeIcon style={{ color: typeColors[fu.type] || t.textSecondary }} />
-                          <span style={{ fontSize:'0.8rem', fontWeight:'600', textTransform:'capitalize' }}>{fu.type}</span>
+                      <td data-label="Position Applied" style={tdStyle}>{fu.lead_position_applied || '—'}</td>
+                      <td data-label="Schedule / Type" style={tdStyle}>
+                        <div className="cell-content" style={{ display: 'flex', flexDirection: 'column' }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:'6px', marginBottom:'4px' }}>
+                            <TypeIcon style={{ color: typeColors[fu.type] || t.textSecondary }} />
+                            <span style={{ fontSize:'0.8rem', fontWeight:'600', textTransform:'capitalize' }}>{fu.type}</span>
+                          </div>
+                          <p style={{ fontSize:'0.78rem', color: missed ? '#ef4444' : t.textSecondary, margin:0 }}>{formatDateTime(fu.scheduled_at)}</p>
+                          <p style={{ fontSize:'0.7rem', color:t.textMuted, margin:0 }}>{timeAgo(fu.scheduled_at)}</p>
                         </div>
-                        <p style={{ fontSize:'0.78rem', color: missed ? '#ef4444' : t.textSecondary, margin:0 }}>{formatDateTime(fu.scheduled_at)}</p>
-                        <p style={{ fontSize:'0.7rem', color:t.textMuted, margin:0 }}>{timeAgo(fu.scheduled_at)}</p>
                       </td>
-                      <td style={tdStyle}>
-                        <StatusBadge status={missed ? 'missed' : fu.status} />
-                        {fu.outcome && <p style={{ fontSize:'0.75rem', color:'#10b981', margin:'4px 0 0' }}>✓ {fu.outcome}</p>}
+                      <td data-label="Status" style={tdStyle}>
+                        <div className="cell-content" style={{ display: 'flex', flexDirection: 'column' }}>
+                          <StatusBadge status={missed ? 'missed' : fu.status} />
+                          {fu.outcome && <p style={{ fontSize:'0.75rem', color:'#10b981', margin:'4px 0 0' }}>✓ {fu.outcome}</p>}
+                        </div>
                       </td>
-                      <td style={{ ...tdStyle, maxWidth:'200px', whiteSpace:'normal', wordBreak:'break-word' }}>
+                      <td data-label="Notes" style={{ ...tdStyle, maxWidth:'200px', whiteSpace:'normal', wordBreak:'break-word' }}>
                         {fu.notes || <span style={{ color:t.textMuted }}>—</span>}
                       </td>
-                      <td style={tdStyle}>
-                        {['pending', 'rescheduled'].includes(fu.status) ? (
-                          <button onClick={() => openComplete(fu)} style={{ ...btnPrimary, padding:'6px 12px', fontSize:'0.8rem', display:'flex', alignItems:'center', gap:'4px' }}>
-                            <RiCheckLine /> Complete
-                          </button>
-                        ) : (
-                          <span style={{ color:t.textMuted }}>—</span>
-                        )}
+                      <td data-label="Action" style={tdStyle}>
+                        <div className="action-buttons" style={{ display: 'flex' }}>
+                          {['pending', 'rescheduled'].includes(fu.status) ? (
+                            <button onClick={() => openComplete(fu)} style={{ ...btnPrimary, padding:'6px 12px', fontSize:'0.8rem', display:'flex', alignItems:'center', gap:'4px' }}>
+                              <RiCheckLine /> Complete
+                            </button>
+                          ) : (
+                            <span style={{ color:t.textMuted }}>—</span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )
@@ -249,9 +309,10 @@ export default function HRFollowUps() {
                 )}
               </tbody>
             </table>
+            </div>
+            <Pagination pagination={pagination} onPageChange={setPage} />
           </div>
-          <Pagination pagination={pagination} onPageChange={setPage} />
-        </div>
+        </>
       )}
 
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Update Follow-up" size="sm"
@@ -273,13 +334,27 @@ export default function HRFollowUps() {
           <div>
             <label style={label(isDark)}>Status</label>
             <select value={form.status} onChange={e => handleStatusChange(e.target.value)} style={{ ...input(isDark) }}>
-              <option value="completed">Completed</option>
-              <option value="converted">Converted</option>
+              {!isKrishnagiri && <option value="completed">Completed</option>}
+              {!isKrishnagiri && <option value="converted">Converted</option>}
+              <option value="exemption">Exemption</option>
               <option value="not_interested">Not Interested</option>
               <option value="missed">Missed</option>
               <option value="rescheduled">Rescheduled</option>
             </select>
           </div>
+
+          {form.status === 'exemption' && (
+            <div>
+              <label style={label(isDark)}>Language spoken</label>
+              <input 
+                type="text" 
+                placeholder="e.g. Telugu, Tamil..."
+                value={form.language_spoken} 
+                onChange={e => setForm({ ...form, language_spoken: e.target.value })} 
+                style={{ ...input(isDark) }} 
+              />
+            </div>
+          )}
 
           {form.status === 'rescheduled' && (
             <div>

@@ -15,6 +15,14 @@ const useAuthStore = create(
         if (token && user) {
           api.defaults.headers.common['Authorization'] = `Bearer ${token}`
           connectSocket(token)
+          try {
+            const res = await api.get('/auth/me')
+            if (res.data && res.data.user) {
+              set({ user: res.data.user })
+            }
+          } catch (e) {
+            console.error('Failed to refresh user profile:', e)
+          }
         }
       },
 

@@ -4,7 +4,17 @@ const xlsx = require('xlsx');
 const Lead = require('../models/Lead');
 const Performance = require('../models/Performance');
 const Attendance = require('../models/Attendance');
+const User = require('../models/User');
+const mongoose = require('mongoose');
 const { authenticate, authorizeAdmin } = require('../middleware/auth');
+
+const getBranchUserIds = async (req) => {
+  if (req.user.role === 'branchadmin' && req.user.branch) {
+    const users = await User.find({ branch: req.user.branch }).select('_id').lean();
+    return users.map(u => u._id);
+  }
+  return null;
+};
 
 router.use(authenticate, authorizeAdmin);
 
@@ -15,7 +25,17 @@ router.get('/leads', async (req, res) => {
     const from = date_from ? new Date(date_from) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const to = date_to ? new Date(date_to) : new Date();
 
-    const leads = await Lead.find({ created_at: { $gte: from, $lte: to } })
+    const branchUserIds = await getBranchUserIds(req);
+    let query = { created_at: { $gte: from, $lte: to } };
+    if (branchUserIds) {
+      query.$or = [
+        { assigned_to: { $in: branchUserIds } },
+        { assigned_to: null },
+        { assigned_to: { $exists: false } }
+      ];
+    }
+
+    const leads = await Lead.find(query)
       .populate('assigned_to', 'name')
       .sort({ created_at: -1 })
       .lean();
@@ -59,8 +79,14 @@ router.get('/performance', async (req, res) => {
     const from = date_from ? new Date(date_from) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const to = date_to ? new Date(date_to) : new Date();
 
+    const branchUserIds = await getBranchUserIds(req);
+    let matchStage = { date: { $gte: from, $lte: to } };
+    if (branchUserIds) {
+      matchStage.user_id = { $in: branchUserIds.map(id => new mongoose.Types.ObjectId(id)) };
+    }
+
     const agg = await Performance.aggregate([
-      { $match: { date: { $gte: from, $lte: to } } },
+      { $match: matchStage },
       { 
         $group: {
           _id: "$user_id",
@@ -124,7 +150,11 @@ router.get('/attendance', async (req, res) => {
     const from = date_from ? new Date(date_from) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const to = date_to ? new Date(date_to) : new Date();
 
-    const records = await Attendance.find({ date: { $gte: from, $lte: to } })
+    const branchUserIds = await getBranchUserIds(req);
+    let query = { date: { $gte: from, $lte: to } };
+    if (branchUserIds) query.user_id = { $in: branchUserIds };
+
+    const records = await Attendance.find(query)
       .populate('user_id', 'name email department')
       .sort({ date: -1 })
       .lean();

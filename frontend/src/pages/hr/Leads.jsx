@@ -9,6 +9,7 @@ import { PageLoader } from '../../components/ui/LoadingSpinner'
 import { formatDate, formatDateTime, debounce } from '../../utils/helpers'
 import StatusUpdateHistory, { statusLabel } from '../../components/leads/StatusUpdateHistory'
 import useThemeStore from '../../store/themeStore'
+import useAuthStore from '../../store/authStore'
 import { card, getTheme, btnPrimary, btnSecondary, input, label, statusColors, getStatusBadge, getPriorityBadge } from '../../utils/styles'
 import toast from 'react-hot-toast'
 
@@ -38,9 +39,14 @@ export default function HRLeads() {
   const [saving, setSaving] = useState(false)
   const [statusHistory, setStatusHistory] = useState([])
   const [historyLoading, setHistoryLoading] = useState(false)
-
   const { isDark } = useThemeStore()
+  const { user } = useAuthStore()
   const t = getTheme(isDark)
+
+  const filteredStatusOptions = STATUS_OPTIONS.filter(s => {
+    if (s === 'converted' && user?.branch?.name?.toLowerCase() === 'krishnagiri') return false;
+    return true;
+  })
 
   const [pipelineCounts, setPipelineCounts] = useState({
     new: 0,
@@ -156,6 +162,7 @@ export default function HRLeads() {
       status: lead.status,
       position_applied: lead.position_applied || '',
       notes: lead.notes || '',
+      language_spoken: lead.language_spoken || '',
     })
     setStatusHistory([])
     setShowUpdateModal(true)
@@ -177,6 +184,7 @@ export default function HRLeads() {
         status: form.status,
         position_applied: form.position_applied.trim(),
         notes: form.notes,
+        language_spoken: form.language_spoken,
       })
       toast.success('Lead updated')
       setShowUpdateModal(false)
@@ -221,8 +229,31 @@ export default function HRLeads() {
       </div>
 
       {/* Pipeline Summary */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(5, 1fr)', gap:'10px', marginBottom:'20px' }}>
-        {STATUS_OPTIONS.map(s => {
+      <style>{`
+        .pipeline-grid {
+          display: grid;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 10px;
+          margin-bottom: 20px;
+        }
+        @media (max-width: 768px) {
+          .pipeline-grid {
+            grid-template-columns: repeat(3, 1fr) !important;
+          }
+          .pipeline-grid button {
+            padding: 12px 6px !important;
+          }
+          .pipeline-grid button p:first-of-type {
+            font-size: 1.2rem !important;
+          }
+          .pipeline-grid button p:last-of-type {
+            font-size: 0.6rem !important;
+            letter-spacing: 0 !important;
+          }
+        }
+      `}</style>
+      <div className="pipeline-grid">
+        {filteredStatusOptions.map(s => {
           const c = statusColors[s] || { bg:'#f1f5f9', color:'#64748b' }
           const isHovered = hoveredIndex === s
           return (
@@ -260,11 +291,50 @@ export default function HRLeads() {
       </div>
 
       {/* Table */}
-      <div style={{ ...card(isDark), padding:0, overflow:'hidden' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .table-container { background: transparent !important; box-shadow: none !important; padding: 0 !important; border: none !important; overflow: visible !important; }
+          .responsive-table thead { display: none; }
+          .responsive-table, .responsive-table tbody, .responsive-table tr, .responsive-table td { display: block; width: 100%; box-sizing: border-box; }
+          .responsive-table tr { 
+            margin-bottom: 12px; 
+            border: 1px solid ${isDark ? '#334155' : '#e2e8f0'}; 
+            border-radius: 12px; 
+            background: ${isDark ? '#1e293b' : '#ffffff'};
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+          }
+          .responsive-table td { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 8px 12px !important; 
+            border-bottom: 1px solid ${isDark ? '#334155' : '#e2e8f0'};
+            text-align: right;
+            font-size: 0.8rem !important;
+          }
+          .responsive-table td:last-child { border-bottom: none; }
+          .responsive-table td::before { 
+            content: attr(data-label); 
+            font-weight: 700; 
+            font-size: 0.65rem; 
+            text-transform: uppercase; 
+            color: ${isDark ? '#94a3b8' : '#64748b'}; 
+            margin-right: 12px;
+          }
+          .responsive-table td > * {
+            text-align: right;
+            margin: 0;
+            font-size: inherit;
+          }
+          .action-buttons { justify-content: flex-end; width: 100%; }
+        }
+      `}</style>
+      <div className="table-container" style={{ ...card(isDark), padding:0, overflow:'hidden' }}>
         {loading ? <PageLoader /> : (
           <>
             <div style={{ overflowX:'auto' }}>
-              <table style={{ width:'100%', borderCollapse:'collapse' }}>
+              <table className="responsive-table" style={{ width:'100%', borderCollapse:'collapse' }}>
                 <thead>
                   <tr>{['Lead','Phone','Position','Source','Status','Priority','Status Updated','Created','Actions'].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr>
                 </thead>
@@ -273,15 +343,15 @@ export default function HRLeads() {
                     <tr key={lead.id}
                       onMouseEnter={e => e.currentTarget.style.background = isDark ? '#334155' : '#f8fafc'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                      <td style={tdStyle}>
+                      <td data-label="Lead" style={tdStyle}>
                         <p style={{ fontWeight:'600', margin: lead.company ? '0 0 2px' : 0 }}>{lead.name}</p>
                         {lead.company && (
                           <p style={{ fontSize:'0.75rem', color:t.textSecondary, margin:0 }}>{lead.company}</p>
                         )}
                       </td>
-                      <td style={tdStyle}>
+                      <td data-label="Phone" style={tdStyle}>
                         {lead.phone ? (
-                          <>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                             <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
                               <RiPhoneLine style={{ color:'#10b981', fontSize:'14px', flexShrink:0 }} />
                               <span>{lead.phone}</span>
@@ -289,15 +359,15 @@ export default function HRLeads() {
                             {lead.email && (
                               <p style={{ fontSize:'0.72rem', color:t.textSecondary, margin:'2px 0 0', paddingLeft:'20px' }}>{lead.email}</p>
                             )}
-                          </>
+                          </div>
                         ) : lead.email ? (
                           <span>{lead.email}</span>
                         ) : (
                           <span style={{ color:t.textMuted }}>—</span>
                         )}
                       </td>
-                      <td style={{ ...tdStyle, fontSize:'0.8rem' }}>{lead.position_applied || '—'}</td>
-                      <td style={{ ...tdStyle }}>
+                      <td data-label="Position" style={{ ...tdStyle, fontSize:'0.8rem' }}>{lead.position_applied || '—'}</td>
+                      <td data-label="Source" style={{ ...tdStyle }}>
                         <span style={{ 
                           padding: '4px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '600',
                           background: lead.lead_source === 'Own Lead' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
@@ -307,26 +377,26 @@ export default function HRLeads() {
                           {lead.lead_source || 'Admin Lead'}
                         </span>
                       </td>
-                      <td style={tdStyle}><StatusBadge status={lead.status} /></td>
-                      <td style={tdStyle}><PriorityBadge priority={lead.priority} /></td>
+                      <td data-label="Status" style={tdStyle}><StatusBadge status={lead.status} /></td>
+                      <td data-label="Priority" style={tdStyle}><PriorityBadge priority={lead.priority} /></td>
 
-                      <td style={{ ...tdStyle, fontSize:'0.78rem', color:t.textSecondary, minWidth:'140px' }}>
+                      <td data-label="Status Updated" style={{ ...tdStyle, fontSize:'0.78rem', color:t.textSecondary, minWidth:'140px' }}>
                         {lead.status_updated_at ? (
-                          <>
+                          <div style={{ textAlign: 'right' }}>
                             <p style={{ margin:'0 0 4px', fontWeight:'600', color:t.textPrimary }}>{formatDateTime(lead.status_updated_at)}</p>
                             {(lead.previous_status || lead.status_updated_to) && (
                               <p style={{ margin:0, fontSize:'0.72rem' }}>
                                 {statusLabel(lead.previous_status)} → {statusLabel(lead.status_updated_to || lead.status)}
                               </p>
                             )}
-                          </>
+                          </div>
                         ) : (
                           <span style={{ color:t.textMuted }}>—</span>
                         )}
                       </td>
-                      <td style={{ ...tdStyle, fontSize:'0.78rem', color:t.textSecondary }}>{formatDate(lead.created_at)}</td>
-                      <td style={tdStyle}>
-                        <div style={{ display:'flex', gap:'4px' }}>
+                      <td data-label="Created" style={{ ...tdStyle, fontSize:'0.78rem', color:t.textSecondary }}>{formatDate(lead.created_at)}</td>
+                      <td data-label="Actions" style={tdStyle}>
+                        <div className="action-buttons" style={{ display:'flex', gap:'4px' }}>
                           <button onClick={() => openEdit(lead)} title="Edit lead" style={{ padding:'6px', borderRadius:'8px', border:'none', background:'transparent', cursor:'pointer', color:'#3b82f6', fontSize:'16px', display:'flex' }}><RiEditLine /></button>
                           <button onClick={() => { setSelectedLead(lead); setShowFUModal(true) }} title="Schedule Follow-up" style={{ padding:'6px', borderRadius:'8px', border:'none', background:'transparent', cursor:'pointer', color:'#10b981', fontSize:'16px', display:'flex' }}><RiCalendarLine /></button>
                         </div>
@@ -387,7 +457,7 @@ export default function HRLeads() {
             <div style={{ marginBottom:'20px' }}>
               <label style={label(isDark)}>Status</label>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px' }}>
-                {STATUS_OPTIONS.map(s => {
+                {filteredStatusOptions.map(s => {
                   const active = form.status === s
                   return (
                     <button key={s} onClick={() => setForm({ ...form, status: s })} style={{
@@ -402,6 +472,18 @@ export default function HRLeads() {
                 })}
               </div>
             </div>
+            {form.status === 'exemption' && (
+              <div style={{ marginBottom:'20px' }}>
+                <label style={label(isDark)}>Language spoken</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Telugu, Tamil..."
+                  value={form.language_spoken || ''}
+                  onChange={e => setForm({ ...form, language_spoken: e.target.value })}
+                  style={input(isDark)}
+                />
+              </div>
+            )}
             <div>
               <label style={label(isDark)}>Notes</label>
               <textarea rows={4} placeholder="Call back tomorrow 4pm..." value={form.notes} onChange={e => setForm({ ...form, notes:e.target.value })} style={{ ...input(isDark), resize:'vertical' }} />

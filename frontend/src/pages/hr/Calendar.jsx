@@ -69,7 +69,19 @@ export default function HRCalendar() {
         </button>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:'20px' }}>
+      <style>{`
+        .calendar-grid {
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          gap: 20px;
+        }
+        @media (max-width: 768px) {
+          .calendar-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+      <div className="calendar-grid">
         <div style={card(isDark)}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'24px' }}>
             <h2 style={{ fontSize:'1.1rem', fontWeight:'800', color:t.textPrimary, margin:0 }}>{MONTHS[month]} {year}</h2>

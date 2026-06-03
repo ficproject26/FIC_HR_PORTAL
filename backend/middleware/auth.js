@@ -28,6 +28,7 @@ const authenticate = async (req, res, next) => {
       role: user.role,
       is_active: user.is_active,
       is_blocked: user.is_blocked,
+      branch: user.branch ? user.branch.toString() : null,
     };
     next();
   } catch (err) {
@@ -39,8 +40,8 @@ const authenticate = async (req, res, next) => {
 };
 
 const authorizeAdmin = (req, res, next) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ success: false, message: 'Admin access required' });
+  if (!['admin', 'superadmin', 'branchadmin'].includes(req.user.role)) {
+    return res.status(403).json({ message: 'Forbidden: admin only' });
   }
   next();
 };

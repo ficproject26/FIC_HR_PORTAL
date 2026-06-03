@@ -8,6 +8,14 @@ const { authenticate } = require('../middleware/auth');
 
 router.use(authenticate);
 
+const getBranchUserIds = async (req) => {
+  if (req.user.role === 'branchadmin' && req.user.branch) {
+    const users = await User.find({ branch: req.user.branch }).select('_id').lean();
+    return users.map(u => u._id);
+  }
+  return null;
+};
+
 function formatTask(t) {
   const assigned = t.user_id;
   const creator = t.created_by;
@@ -21,10 +29,18 @@ function formatTask(t) {
   };
 }
 
-function buildListQuery(req) {
+async function buildListQuery(req) {
   const query = {};
+  const branchUserIds = await getBranchUserIds(req);
+
   if (req.user.role === 'hr') {
     query.user_id = new mongoose.Types.ObjectId(req.user.id);
+  } else if (branchUserIds) {
+    if (req.query.user_id && branchUserIds.some(id => id.toString() === req.query.user_id)) {
+      query.user_id = new mongoose.Types.ObjectId(req.query.user_id);
+    } else {
+      query.user_id = { $in: branchUserIds.map(id => new mongoose.Types.ObjectId(id)) };
+    }
   } else if (req.query.user_id) {
     query.user_id = new mongoose.Types.ObjectId(req.query.user_id);
   }
@@ -37,7 +53,7 @@ router.get('/', async (req, res) => {
     const { status, priority, page = 1, limit = 10 } = req.query;
     const skip = (page - 1) * limit;
 
-    const query = buildListQuery(req);
+    const query = await buildListQuery(req);
     if (status) query.status = status;
     if (priority) query.priority = priority;
 
@@ -70,8 +86,8 @@ router.get('/', async (req, res) => {
 // POST /api/tasks — admin assigns to HR; HR cannot create
 router.post('/', async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Only admin can create tasks for HR' });
+    if (!['admin', 'superadmin', 'branchadmin'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Only admin or branch admin can create tasks for HR' });
     }
 
     const { title, description, priority, due_date, lead_id, user_id } = req.body;
@@ -89,6 +105,10 @@ router.post('/', async (req, res) => {
 
     if (!hrUser) {
       return res.status(400).json({ success: false, message: 'Invalid or inactive HR user' });
+    }
+
+    if (req.user.role === 'branchadmin' && req.user.branch && hrUser.branch?.toString() !== req.user.branch.toString()) {
+      return res.status(403).json({ success: false, message: 'Cannot assign tasks to HR from another branch' });
     }
 
     const task = await Task.create({
@@ -195,8 +215,9 @@ router.get('/today', async (req, res) => {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
+    const baseQuery = await buildListQuery(req);
     const query = {
-      ...buildListQuery(req),
+      ...baseQuery,
       due_date: { $gte: today, $lt: tomorrow },
     };
 

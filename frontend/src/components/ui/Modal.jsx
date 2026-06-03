@@ -4,7 +4,7 @@ import useThemeStore from '../../store/themeStore'
 
 const sizeMap = { sm: '400px', md: '520px', lg: '680px', xl: '900px', full: '1100px' }
 
-export default function Modal({ isOpen, onClose, title, children, size = 'md', footer }) {
+export default function Modal({ isOpen, onClose, title, children, size = 'md', footer, zIndex = 50 }) {
   const { isDark } = useThemeStore()
 
   useEffect(() => {
@@ -16,7 +16,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', f
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 50,
+      position: 'fixed', inset: 0, zIndex,
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px',
     }}>
       {/* Backdrop */}

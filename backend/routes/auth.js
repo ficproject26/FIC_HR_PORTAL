@@ -15,7 +15,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email and password required' });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).populate('branch');
 
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
@@ -57,7 +57,8 @@ router.post('/login', async (req, res) => {
         role: user.role,
         avatar: user.avatar,
         department: user.department,
-        designation: user.designation
+        designation: user.designation,
+        branch: user.branch
       }
     });
   } catch (err) {
@@ -85,7 +86,7 @@ router.post('/logout', authenticate, async (req, res) => {
 // GET /api/auth/me
 router.get('/me', authenticate, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
+    const user = await User.findById(req.user.id).populate('branch').select('-password');
     res.json({ success: true, user });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error' });

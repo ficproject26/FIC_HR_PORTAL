@@ -14,6 +14,7 @@ const LeadSchema = new mongoose.Schema({
   position_applied: { type: String, maxlength: 150 },
   experience_years: { type: Number },
   skills: [{ type: String }],
+  language_spoken: { type: String, maxlength: 150 },
   location: { type: String, maxlength: 150 },
   linkedin_url: { type: String, maxlength: 255 },
   resume_url: { type: String, maxlength: 255 },

@@ -314,11 +314,7 @@ export default function HRDashboard() {
       </div>
 
       {/* Attendance Banner */}
-      <div style={{
-        background: 'linear-gradient(135deg, #2563eb, #4f46e5)',
-        borderRadius: '16px', padding: '20px 24px', marginBottom: '24px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px',
-      }}>
+      <div className="session-banner">
         <div>
           <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', margin: '0 0 4px' }}>Today&apos;s Session</p>
           <p style={{ color: 'white', fontSize: '1.5rem', fontWeight: '800', margin: 0 }}>
@@ -329,8 +325,8 @@ export default function HRDashboard() {
           )}
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '14px' }}>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <div className="session-actions-container">
+          <div className="session-buttons-row">
             <button
               type="button"
               onClick={handleClockIn}
@@ -366,7 +362,7 @@ export default function HRDashboard() {
             </button>
           </div>
 
-          <div style={{ display: 'flex', gap: '28px' }}>
+          <div className="session-stats-row">
             {[
               { label: 'Login', value: att?.login_time ? formatTime(att.login_time) : '—' },
               { label: 'Logout', value: att?.logout_time ? formatTime(att.logout_time) : isLoggedIn ? 'Active' : '—' },
@@ -382,7 +378,108 @@ export default function HRDashboard() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '16px', marginBottom: '24px' }}>
+      <style>{`
+        .session-banner {
+          background: linear-gradient(135deg, #2563eb, #4f46e5);
+          border-radius: 16px;
+          padding: 20px 24px;
+          margin-bottom: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 20px;
+        }
+        .session-actions-container {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 14px;
+        }
+        .session-stats-row {
+          display: flex;
+          gap: 28px;
+        }
+        .session-buttons-row {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+        @media (max-width: 768px) {
+          .session-banner {
+            flex-direction: column;
+            align-items: stretch;
+            padding: 16px !important;
+          }
+          .session-actions-container {
+            align-items: stretch;
+            gap: 16px;
+          }
+          .session-buttons-row {
+            justify-content: space-between;
+            gap: 8px;
+          }
+          .session-buttons-row > button {
+            flex: 1;
+            padding: 8px 4px !important;
+            font-size: 0.75rem !important;
+            min-width: 0 !important;
+          }
+          .session-stats-row {
+            justify-content: space-between;
+            gap: 8px;
+          }
+          .session-stats-row > div {
+            text-align: left !important;
+          }
+          .session-stats-row p:first-child {
+            font-size: 0.65rem !important;
+          }
+          .session-stats-row p:last-child {
+            font-size: 0.85rem !important;
+          }
+        }
+        .hr-dashboard-stats-grid {
+          display: grid;
+          grid-template-columns: repeat(6, 1fr);
+          gap: 16px;
+          margin-bottom: 24px;
+        }
+        @media (max-width: 768px) {
+          .hr-dashboard-stats-grid {
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 10px !important;
+          }
+          .hr-dashboard-stats-grid .stat-card {
+            padding: 14px 8px !important;
+            border-radius: 12px !important;
+            gap: 8px !important;
+          }
+          .hr-dashboard-stats-grid .stat-card-icon-wrapper {
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 8px !important;
+          }
+          .hr-dashboard-stats-grid .stat-card-icon {
+            font-size: 16px !important;
+          }
+          .hr-dashboard-stats-grid .stat-card-label {
+            font-size: 0.55rem !important;
+            margin-bottom: 4px !important;
+            white-space: normal !important;
+            line-height: 1.2 !important;
+            letter-spacing: 0 !important;
+          }
+          .hr-dashboard-stats-grid .stat-card-value {
+            font-size: 1.35rem !important;
+          }
+          .hr-dashboard-charts-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
+      <div className="hr-dashboard-stats-grid">
         <StatCard icon={RiContactsLine} label="Assigned Leads" value={stats?.assignedLeads} color="blue" onClick={() => handleCardClick('assigned_leads', 'Assigned Leads')} />
         <StatCard icon={RiCalendarCheckLine} label="Pending Follow-ups" value={stats?.pendingFollowups} color="orange" onClick={() => handleCardClick('pending_followups', 'Pending Follow-ups')} />
         <StatCard icon={RiTimeLine} label="Today's Follow-ups" value={stats?.todayFollowups} color="purple" onClick={() => handleCardClick('today_followups', 'Today\'s Follow-ups')} />
@@ -392,7 +489,7 @@ export default function HRDashboard() {
       </div>
 
       {/* Charts */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+      <div className="hr-dashboard-charts-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
         {/* Weekly Performance */}
         <div style={card(isDark)}>
           <h3 style={{ fontSize: '0.95rem', fontWeight: '700', color: t.textPrimary, margin: '0 0 20px' }}>Weekly Performance</h3>

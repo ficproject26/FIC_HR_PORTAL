@@ -26,7 +26,7 @@ export default function Login() {
     setLoading(false)
     if (result.success) {
       toast.success(`Welcome back, ${result.user.name}!`)
-      navigate(result.user.role === 'admin' ? '/admin' : '/hr')
+      navigate(['admin', 'superadmin', 'branchadmin'].includes(result.user.role) ? '/admin' : '/hr')
     } else {
       const msg = result.message || 'Invalid email or password'
       setError(msg)

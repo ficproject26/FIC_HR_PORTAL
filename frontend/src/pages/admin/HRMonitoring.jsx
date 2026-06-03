@@ -295,7 +295,7 @@ export default function HRMonitoring() {
       </div>
 
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+      <div className="kpi-grid">
         <StatCard 
           icon={RiTeamLine} 
           label="Total HR" 
@@ -357,7 +357,21 @@ export default function HRMonitoring() {
       {filtered.length === 0 && (
         <div style={{ ...card(isDark), textAlign: 'center', padding: '48px', color: t.textSecondary }}>No HR users found</div>
       )}
-      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
+      <style>{`
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+        .kpi-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 16px;
+          margin-bottom: 24px;
+        }
+        @media (max-width: 768px) {
+          .kpi-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+          }
+        }
+      `}</style>
 
       {/* Details Modal */}
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={modalTitle} size="lg">

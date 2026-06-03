@@ -7,14 +7,31 @@ const { authenticate, authorizeAdmin } = require('../middleware/auth');
 
 router.use(authenticate);
 
+const getBranchUserIds = async (req) => {
+  if (req.user.role === 'branchadmin' && req.user.branch) {
+    const users = await User.find({ branch: req.user.branch }).select('_id').lean();
+    return users.map(u => u._id);
+  }
+  return null;
+};
+
 // GET /api/performance - Get performance data
 router.get('/', async (req, res) => {
   try {
     const { user_id, period = 'daily', date_from, date_to } = req.query;
+    const branchUserIds = await getBranchUserIds(req);
     const targetId = req.user.role === 'hr' ? req.user.id : (user_id || null);
 
     let matchStage = {};
-    if (targetId) matchStage.user_id = targetId;
+    if (targetId) {
+      if (branchUserIds && !branchUserIds.some(id => id.toString() === targetId.toString())) {
+        matchStage.user_id = { $in: branchUserIds.map(id => new mongoose.Types.ObjectId(id)) };
+      } else {
+        matchStage.user_id = new mongoose.Types.ObjectId(targetId);
+      }
+    } else if (branchUserIds) {
+      matchStage.user_id = { $in: branchUserIds.map(id => new mongoose.Types.ObjectId(id)) };
+    }
 
     if (date_from || date_to) {
       matchStage.date = {};
@@ -87,13 +104,23 @@ router.get('/today', async (req, res) => {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
+    const branchUserIds = await getBranchUserIds(req);
     const userId = req.user.role === 'hr' ? req.user.id : req.query.user_id;
 
     let data;
     if (userId) {
-      data = await Performance.find({ user_id: userId, date: { $gte: today, $lt: tomorrow } }).lean();
+      if (branchUserIds && !branchUserIds.some(id => id.toString() === userId.toString())) {
+        data = await Performance.find({ user_id: { $in: branchUserIds }, date: { $gte: today, $lt: tomorrow } })
+          .populate('user_id', 'name').sort({ calls_made: -1 }).lean();
+        data = data.map(p => ({ ...p, user_name: p.user_id ? p.user_id.name : null }));
+      } else {
+        data = await Performance.find({ user_id: userId, date: { $gte: today, $lt: tomorrow } }).lean();
+      }
     } else {
-      data = await Performance.find({ date: { $gte: today, $lt: tomorrow } })
+      let query = { date: { $gte: today, $lt: tomorrow } };
+      if (branchUserIds) query.user_id = { $in: branchUserIds };
+
+      data = await Performance.find(query)
         .populate('user_id', 'name')
         .sort({ calls_made: -1 })
         .lean();
@@ -146,7 +173,11 @@ router.get('/comparison', authorizeAdmin, async (req, res) => {
     const from = date_from ? new Date(date_from) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const to = date_to ? new Date(date_to) : new Date();
 
-    const hrUsers = await User.find({ role: 'hr', is_active: true }).lean();
+    const branchUserIds = await getBranchUserIds(req);
+    let hrMatch = { role: 'hr', is_active: true };
+    if (branchUserIds) hrMatch._id = { $in: branchUserIds };
+
+    const hrUsers = await User.find(hrMatch).lean();
 
     const data = await Promise.all(hrUsers.map(async u => {
       const perfs = await Performance.aggregate([

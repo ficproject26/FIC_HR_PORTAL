@@ -280,7 +280,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+      <div className="dashboard-stats-grid">
         <StatCard icon={RiTeamLine} label="Total HR" value={stats?.totalHR} color="blue" onClick={() => handleCardClick('hr', 'Total HR Users')} />
         <StatCard icon={RiUserFollowLine} label="Active Today" value={stats?.activeToday} color="green" onClick={() => handleCardClick('active_hr', 'Active Today HR Detail')} />
         <StatCard icon={RiContactsLine} label="Total Leads" value={stats?.totalLeads} color="purple" onClick={() => handleCardClick('leads', 'All Leads')} />
@@ -293,10 +293,11 @@ export default function AdminDashboard() {
         <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: t.textPrimary, margin: '0 0 4px' }}>HR Consultants</h2>
         <p style={{ color: t.textSecondary, fontSize: '0.875rem', margin: '0 0 20px' }}>Click a consultant to manage their leads, badges, attendance & reports.</p>
         
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px' }}>
+        <div className="hr-cards-grid">
           {hrRankings?.map(hr => (
             <div 
               key={hr.id}
+              className="hr-card"
               onClick={() => setSelectedHRId(hr.id)}
               style={{
                 background: isDark ? '#1e293b' : '#fff',
@@ -316,24 +317,24 @@ export default function AdminDashboard() {
                 e.currentTarget.style.boxShadow = isDark ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 10px 30px rgba(0,0,0,0.05)';
               }}
             >
-              <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, #2563eb, #eab308)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', color: '#fff', fontSize: '2rem', fontWeight: '800', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
+              <div className="hr-card-avatar" style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, #2563eb, #eab308)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', color: '#fff', fontSize: '2rem', fontWeight: '800', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
                 {getInitials(hr.name || 'User')}
               </div>
-              <h3 style={{ margin: '0 0 4px', fontSize: '1.15rem', fontWeight: '800', color: t.textPrimary }}>{hr.name || 'Unknown User'}</h3>
-              <p style={{ margin: '0 0 20px', fontSize: '0.8rem', color: t.textSecondary }}>{hr.email || `${(hr.name || 'user').split(' ')[0].toLowerCase()}@forgeindia.in`}</p>
+              <h3 className="hr-card-name" style={{ margin: '0 0 4px', fontSize: '1.15rem', fontWeight: '800', color: t.textPrimary }}>{hr.name || 'Unknown User'}</h3>
+              <p className="hr-card-email" style={{ margin: '0 0 20px', fontSize: '0.8rem', color: t.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', textAlign: 'center' }}>{hr.email || `${(hr.name || 'user').split(' ')[0].toLowerCase()}@forgeindia.in`}</p>
               
               <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ textAlign: 'center', flex: 1 }}>
-                  <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: t.textPrimary }}>{hr.total_leads}</p>
-                  <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: '700', color: t.textSecondary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Leads</p>
+                  <p className="hr-card-stat-value" style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: t.textPrimary }}>{hr.total_leads}</p>
+                  <p className="hr-card-stat-label" style={{ margin: 0, fontSize: '0.65rem', fontWeight: '700', color: t.textSecondary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Leads</p>
                 </div>
-                <div style={{ textAlign: 'center', background: 'linear-gradient(135deg, #2563eb, #eab308)', padding: '8px 24px', borderRadius: '12px', color: '#fff', boxShadow: '0 4px 10px rgba(37,99,235,0.3)', flexShrink: 0 }}>
-                  <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800' }}>{hr.converted_leads}</p>
-                  <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Won</p>
+                <div className="hr-card-stats" style={{ textAlign: 'center', background: 'linear-gradient(135deg, #2563eb, #eab308)', padding: '8px 24px', borderRadius: '12px', color: '#fff', boxShadow: '0 4px 10px rgba(37,99,235,0.3)', flexShrink: 0 }}>
+                  <p className="hr-card-stat-value" style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800' }}>{hr.converted_leads}</p>
+                  <p className="hr-card-stat-label" style={{ margin: 0, fontSize: '0.65rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Won</p>
                 </div>
                 <div style={{ textAlign: 'center', flex: 1 }}>
-                  <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: t.textPrimary }}>{hr.badges?.length || 0}</p>
-                  <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: '700', color: t.textSecondary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Badges</p>
+                  <p className="hr-card-stat-value" style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: t.textPrimary }}>{hr.badges?.length || 0}</p>
+                  <p className="hr-card-stat-label" style={{ margin: 0, fontSize: '0.65rem', fontWeight: '700', color: t.textSecondary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Badges</p>
                 </div>
               </div>
               
@@ -364,7 +365,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Charts Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '24px' }}>
+      <div className="dashboard-charts-grid">
         {/* Monthly Conversions */}
         <div style={card(isDark)}>
           <h3 style={{ fontSize: '0.95rem', fontWeight: '700', color: t.textPrimary, margin: '0 0 20px' }}>Monthly Lead Conversions</h3>
@@ -410,51 +411,66 @@ export default function AdminDashboard() {
 
       {/* HR Rankings */}
       <div style={card(isDark)}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '8px' }}>
           <h3 style={{ fontSize: '0.95rem', fontWeight: '700', color: t.textPrimary, margin: 0 }}>HR Performance Rankings</h3>
           <span style={{ fontSize: '0.75rem', color: t.textSecondary }}>Top performers this month</span>
         </div>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table className="hr-rankings-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${t.border}` }}>
-                {['Rank', 'HR Name', 'Leads', 'Converted', 'Calls', 'Follow-ups', 'Rate'].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '10px 12px', fontSize: '0.72rem', fontWeight: '700', color: t.textSecondary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                {['Rank', 'HR Name', 'Leads', 'Converted', 'Calls', 'Follow-ups', 'Rate'].map((h, idx) => (
+                  <th key={h} className={`ranking-col-${idx}`} style={{ textAlign: 'left', padding: '10px 12px', fontSize: '0.72rem', fontWeight: '700', color: t.textSecondary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {hrRankings?.length ? hrRankings.map((hr, i) => (
                 <tr key={hr.id} style={{ borderBottom: `1px solid ${t.tableBorder}` }}>
-                  <td style={{ padding: '12px' }}>
+                  <td className="ranking-col-0" style={{ padding: '12px' }}>
+                    <span className="mobile-label">🏆 Rank: </span>
                     <div style={{
                       width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: '0.75rem', fontWeight: '800',
                       background: i === 0 ? '#fef9c3' : i === 1 ? '#f1f5f9' : i === 2 ? '#ffedd5' : t.hoverBg,
                       color: i === 0 ? '#854d0e' : i === 1 ? '#64748b' : i === 2 ? '#9a3412' : t.textSecondary,
-                    }}>{i + 1}</div>
+                    }}>#{i + 1}</div>
                   </td>
-                  <td style={{ padding: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: isDark ? 'rgba(59,130,246,0.2)' : '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <span style={{ color: '#3b82f6', fontSize: '0.7rem', fontWeight: '800' }}>{getInitials(hr.name)}</span>
+                  <td className="ranking-col-1" style={{ padding: '12px' }}>
+                    <span className="mobile-label">👤 HR Name: </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: isDark ? 'rgba(59,130,246,0.2)' : '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <span style={{ color: '#3b82f6', fontSize: '0.65rem', fontWeight: '800' }}>{getInitials(hr.name)}</span>
                       </div>
-                      <div>
-                        <p style={{ fontSize: '0.875rem', fontWeight: '600', color: t.textPrimary, margin: 0 }}>{hr.name}</p>
-                        <p style={{ fontSize: '0.72rem', color: t.textSecondary, margin: 0 }}>{hr.department}</p>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: '0.8rem', fontWeight: '600', color: t.textPrimary, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{hr.name}</p>
+                        <p style={{ fontSize: '0.65rem', color: t.textSecondary, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{hr.department}</p>
                       </div>
                     </div>
                   </td>
-                  <td style={{ padding: '12px', fontSize: '0.875rem', fontWeight: '600', color: t.textPrimary }}>{hr.total_leads}</td>
-                  <td style={{ padding: '12px' }}><span style={{ fontSize: '0.875rem', fontWeight: '700', color: '#10b981' }}>{hr.converted_leads}</span></td>
-                  <td style={{ padding: '12px', fontSize: '0.875rem', color: t.textPrimary }}>{hr.total_calls}</td>
-                  <td style={{ padding: '12px', fontSize: '0.875rem', color: t.textPrimary }}>{hr.total_followups}</td>
-                  <td style={{ padding: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '60px', height: '6px', background: isDark ? '#334155' : '#e2e8f0', borderRadius: '9999px', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', background: '#3b82f6', borderRadius: '9999px', width: `${Math.min(hr.conversion_rate, 100)}%` }} />
+                  <td className="ranking-col-2" style={{ padding: '12px', fontSize: '0.875rem', fontWeight: '600', color: t.textPrimary }}>
+                    <span className="mobile-label">📊 Leads:</span>
+                    {hr.total_leads}
+                  </td>
+                  <td className="ranking-col-3" style={{ padding: '12px' }}>
+                    <span className="mobile-label">✅ Converted:</span>
+                    <span style={{ fontSize: '0.875rem', fontWeight: '700', color: '#10b981' }}>{hr.converted_leads}</span>
+                  </td>
+                  <td className="ranking-col-4" style={{ padding: '12px', fontSize: '0.875rem', color: t.textPrimary }}>
+                    <span className="mobile-label">📞 Calls:</span>
+                    {hr.total_calls}
+                  </td>
+                  <td className="ranking-col-5" style={{ padding: '12px', fontSize: '0.875rem', color: t.textPrimary }}>
+                    <span className="mobile-label">🔄 Follow-ups:</span>
+                    {hr.total_followups}
+                  </td>
+                  <td className="ranking-col-6" style={{ padding: '12px' }}>
+                    <span className="mobile-label">📈 Rate:</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+                      <div className="rate-bar" style={{ flex: 1, height: '6px', background: isDark ? '#334155' : '#e2e8f0', borderRadius: '9999px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', background: '#3b82f6', borderRadius: '9999px', width: `${Math.min(Math.round(hr.conversion_rate || 0), 100)}%` }} />
                       </div>
-                      <span style={{ fontSize: '0.8rem', fontWeight: '600', color: t.textPrimary }}>{hr.conversion_rate}%</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: '600', color: t.textPrimary }}>{Math.round(hr.conversion_rate || 0)}%</span>
                     </div>
                   </td>
                 </tr>
@@ -483,6 +499,166 @@ export default function AdminDashboard() {
         onClose={() => setSelectedHRId(null)} 
         hrId={selectedHRId} 
       />
+
+      <style>{`
+        .dashboard-stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+          gap: 16px;
+          margin-bottom: 24px;
+        }
+        .dashboard-charts-grid {
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          gap: 20px;
+          margin-bottom: 24px;
+        }
+        .mobile-label {
+          display: none;
+        }
+        @media (max-width: 768px) {
+          .hr-rankings-table thead {
+            display: none;
+          }
+          .hr-rankings-table {
+            display: block;
+            width: 100%;
+          }
+          .hr-rankings-table tbody {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            width: 100%;
+          }
+          .hr-rankings-table tr {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+            margin-bottom: 0;
+            padding: 10px !important;
+            border-radius: 12px !important;
+            border: 1px solid ${isDark ? '#334155' : '#e2e8f0'} !important;
+            background: ${isDark ? '#1e293b' : '#fff'} !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+          }
+          .hr-rankings-table td {
+            display: flex;
+            flex-direction: column;
+            padding: 0 !important;
+            border: none !important;
+            align-items: flex-start;
+            font-size: 0.8rem !important;
+          }
+          .hr-rankings-table .ranking-col-0, 
+          .hr-rankings-table .ranking-col-1 {
+            grid-column: span 2;
+          }
+          .hr-rankings-table .ranking-col-0 {
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+          }
+          .hr-rankings-table .ranking-col-1 {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+            padding-bottom: 8px !important;
+            border-bottom: 1px dashed ${isDark ? '#334155' : '#e2e8f0'} !important;
+            margin-bottom: 8px;
+          }
+          .hr-rankings-table .ranking-col-0 .mobile-label {
+            margin-bottom: 0;
+            width: auto;
+          }
+          .hr-rankings-table .ranking-col-1 .mobile-label {
+            margin-bottom: 2px;
+            width: auto;
+          }
+          .hr-rankings-table .ranking-col-6 {
+            grid-column: span 2;
+            width: 100%;
+          }
+          .mobile-label {
+            display: block !important;
+            font-size: 0.65rem;
+            color: #64748b;
+            font-weight: 600;
+            margin-bottom: 2px;
+            white-space: nowrap;
+          }
+          .dashboard-charts-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+          }
+          .dashboard-stats-grid {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+          }
+          .dashboard-stats-grid .stat-card {
+            padding: 12px 8px !important;
+            border-radius: 12px !important;
+            gap: 8px !important;
+          }
+          .dashboard-stats-grid .stat-card-icon-wrapper {
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 8px !important;
+          }
+          .dashboard-stats-grid .stat-card-icon {
+            font-size: 16px !important;
+          }
+          .dashboard-stats-grid .stat-card-label {
+            font-size: 0.55rem !important;
+            margin-bottom: 4px !important;
+            white-space: normal !important;
+            line-height: 1.2 !important;
+          }
+          .dashboard-stats-grid .stat-card-value {
+            font-size: 1.2rem !important;
+          }
+        }
+
+        .hr-cards-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+          gap: 20px;
+        }
+        @media (max-width: 768px) {
+          .hr-cards-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+          }
+          .hr-card {
+            padding: 16px 8px !important;
+            border-radius: 12px !important;
+          }
+          .hr-card-avatar {
+            width: 50px !important;
+            height: 50px !important;
+            font-size: 1.25rem !important;
+            margin-bottom: 12px !important;
+          }
+          .hr-card-name {
+            font-size: 0.95rem !important;
+          }
+          .hr-card-email {
+            font-size: 0.65rem !important;
+            margin-bottom: 16px !important;
+          }
+          .hr-card-stats {
+            padding: 6px 12px !important;
+            border-radius: 8px !important;
+          }
+          .hr-card-stat-value {
+            font-size: 0.95rem !important;
+          }
+          .hr-card-stat-label {
+            font-size: 0.55rem !important;
+            letter-spacing: 0 !important;
+          }
+        }
+      `}</style>
     </div>
   )
 }

@@ -84,8 +84,47 @@ export default function HRCandidates() {
       <div style={{ ...card(isDark), padding:0, overflow:'hidden' }}>
         {loading ? <PageLoader /> : (
           <>
-            <div style={{ overflowX:'auto' }}>
-              <table style={{ width:'100%', borderCollapse:'collapse' }}>
+            <style>{`
+              @media (max-width: 768px) {
+                .table-container { background: transparent !important; box-shadow: none !important; padding: 0 !important; border: none !important; overflow: visible !important; }
+                .responsive-table thead { display: none; }
+                .responsive-table, .responsive-table tbody, .responsive-table tr, .responsive-table td { display: block; width: 100%; box-sizing: border-box; }
+                .responsive-table tr { 
+                  margin-bottom: 12px; 
+                  border: 1px solid ${isDark ? '#334155' : '#e2e8f0'}; 
+                  border-radius: 12px; 
+                  background: ${isDark ? '#1e293b' : '#ffffff'};
+                  overflow: hidden;
+                  box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+                }
+                .responsive-table td { 
+                  display: flex; 
+                  justify-content: space-between; 
+                  align-items: center; 
+                  padding: 8px 12px !important; 
+                  border-bottom: 1px solid ${isDark ? '#334155' : '#e2e8f0'};
+                  text-align: right;
+                  font-size: 0.8rem !important;
+                }
+                .responsive-table td:last-child { border-bottom: none; }
+                .responsive-table td::before { 
+                  content: attr(data-label); 
+                  font-weight: 700; 
+                  font-size: 0.65rem; 
+                  text-transform: uppercase; 
+                  color: ${isDark ? '#94a3b8' : '#64748b'}; 
+                  margin-right: 12px;
+                }
+                .responsive-table td > * {
+                  text-align: right;
+                  margin: 0;
+                  font-size: inherit;
+                }
+                .action-buttons { justify-content: flex-end; width: 100%; }
+              }
+            `}</style>
+            <div className="table-container" style={{ overflowX:'auto' }}>
+              <table className="responsive-table" style={{ width:'100%', borderCollapse:'collapse' }}>
                 <thead>
                   <tr>{['Candidate','Position','Status','Resume','Actions'].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr>
                 </thead>
@@ -94,7 +133,7 @@ export default function HRCandidates() {
                     <tr key={c.id}
                       onMouseEnter={e => e.currentTarget.style.background = isDark ? '#334155' : '#f8fafc'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                      <td style={tdStyle}>
+                      <td data-label="Candidate" style={tdStyle}>
                         <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
                           <div style={{ width:'36px', height:'36px', borderRadius:'50%', background: isDark ? 'rgba(16,185,129,0.2)' : '#ecfdf5', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                             <span style={{ color:'#10b981', fontSize:'0.72rem', fontWeight:'800' }}>{getInitials(c.name)}</span>
@@ -107,15 +146,17 @@ export default function HRCandidates() {
                           </div>
                         </div>
                       </td>
-                      <td style={{ ...tdStyle, fontSize:'0.8rem' }}>{c.position_applied || '—'}</td>
-                      <td style={tdStyle}><StatusBadge status={c.status} /></td>
-                      <td style={tdStyle}>
+                      <td data-label="Position" style={{ ...tdStyle, fontSize:'0.8rem' }}>{c.position_applied || '—'}</td>
+                      <td data-label="Status" style={tdStyle}><StatusBadge status={c.status} /></td>
+                      <td data-label="Resume" style={tdStyle}>
                         {c.resume_url
                           ? <a href={c.resume_url} target="_blank" rel="noopener noreferrer" style={{ display:'flex', alignItems:'center', gap:'4px', color:'#3b82f6', fontSize:'0.8rem', textDecoration:'none' }}><RiExternalLinkLine /> View</a>
                           : <span style={{ color:t.textMuted, fontSize:'0.78rem' }}>No resume</span>}
                       </td>
-                      <td style={tdStyle}>
-                        <button onClick={() => openEdit(c)} style={{ padding:'6px', borderRadius:'8px', border:'none', background:'transparent', cursor:'pointer', color:'#3b82f6', fontSize:'16px', display:'flex' }}><RiEditLine /></button>
+                      <td data-label="Actions" style={tdStyle}>
+                        <div className="action-buttons" style={{ display: 'flex' }}>
+                          <button onClick={() => openEdit(c)} style={{ padding:'6px', borderRadius:'8px', border:'none', background:'transparent', cursor:'pointer', color:'#3b82f6', fontSize:'16px', display:'flex' }}><RiEditLine /></button>
+                        </div>
                       </td>
                     </tr>
                   ))}

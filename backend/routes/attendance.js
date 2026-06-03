@@ -6,6 +6,14 @@ const { authenticate, authorizeAdmin } = require('../middleware/auth');
 
 router.use(authenticate);
 
+const getBranchUserIds = async (req) => {
+  if (req.user.role === 'branchadmin' && req.user.branch) {
+    const users = await User.find({ branch: req.user.branch }).select('_id').lean();
+    return users.map(u => u._id);
+  }
+  return null;
+};
+
 // GET /api/attendance - Get attendance records
 router.get('/', async (req, res) => {
   try {
@@ -13,9 +21,16 @@ router.get('/', async (req, res) => {
     const skip = (page - 1) * limit;
     
     let query = {};
+    const branchUserIds = await getBranchUserIds(req);
 
     if (req.user.role === 'hr') {
       query.user_id = req.user.id;
+    } else if (branchUserIds) {
+      if (user_id && branchUserIds.some(id => id.toString() === user_id)) {
+        query.user_id = user_id;
+      } else {
+        query.user_id = { $in: branchUserIds };
+      }
     } else if (user_id) {
       query.user_id = user_id;
     }
@@ -64,7 +79,11 @@ router.get('/today', async (req, res) => {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const hrUsers = await User.find({ role: 'hr', is_active: true }).lean();
+    const branchUserIds = await getBranchUserIds(req);
+    let hrMatch = { role: 'hr', is_active: true };
+    if (branchUserIds) hrMatch._id = { $in: branchUserIds };
+
+    const hrUsers = await User.find(hrMatch).lean();
 
     const data = await Promise.all(hrUsers.map(async u => {
       const att = await Attendance.findOne({ user_id: u._id, date: { $gte: today, $lt: tomorrow } }).lean();

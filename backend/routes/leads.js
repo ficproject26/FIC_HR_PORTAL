@@ -26,6 +26,14 @@ const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 router.use(authenticate);
 
+const getBranchUserIds = async (req) => {
+  if (req.user.role === 'branchadmin' && req.user.branch) {
+    const users = await User.find({ branch: req.user.branch }).select('_id').lean();
+    return users.map(u => u._id);
+  }
+  return null;
+};
+
 // GET /api/leads
 router.get('/', async (req, res) => {
   try {
@@ -34,9 +42,13 @@ router.get('/', async (req, res) => {
     
     let query = {};
 
+    const branchUserIds = await getBranchUserIds(req);
+
     // HR can only see their own leads
     if (req.user.role === 'hr') {
       query.assigned_to = req.user.id;
+    } else if (branchUserIds) {
+      query.assigned_to = { $in: branchUserIds };
     }
 
     if (search) {
@@ -50,10 +62,17 @@ router.get('/', async (req, res) => {
 
     if (status) query.status = status;
     if (priority) query.priority = priority;
-    if (assigned_to && req.user.role === 'admin') {
-      query.assigned_to = assigned_to === 'unassigned' ? null : assigned_to;
-    }
     if (source) query.source = source;
+
+    if (assigned_to) {
+      if (['admin', 'superadmin'].includes(req.user.role)) {
+        query.assigned_to = assigned_to === 'unassigned' ? null : assigned_to;
+      } else if (branchUserIds) {
+        if (assigned_to !== 'unassigned' && branchUserIds.some(id => id.toString() === assigned_to)) {
+          query.assigned_to = assigned_to;
+        }
+      }
+    }
 
     const total = await Lead.countDocuments(query);
     const leads = await Lead.find(query)
@@ -99,9 +118,12 @@ router.get('/', async (req, res) => {
 // GET /api/leads/pipeline/stats
 router.get('/pipeline/stats', async (req, res) => {
   try {
+    const branchUserIds = await getBranchUserIds(req);
     let matchStage = {};
     if (req.user.role === 'hr') {
       matchStage.assigned_to = new mongoose.Types.ObjectId(req.user.id);
+    } else if (branchUserIds) {
+      matchStage.assigned_to = { $in: branchUserIds.map(id => new mongoose.Types.ObjectId(id)) };
     }
 
     const { source } = req.query;
@@ -199,7 +221,7 @@ router.post('/', async (req, res) => {
 
     const lead = await Lead.create({
       name, email, phone, company, source: source || 'manual', status: status || 'new', priority: priority || 'medium',
-      assigned_to: req.user.role === 'admin' ? (assigned_to || null) : (assigned_to || req.user.id),
+      assigned_to: ['admin', 'superadmin'].includes(req.user.role) ? (assigned_to || null) : (assigned_to || req.user.id),
       notes, salary_expectation, position_applied,
       experience_years, skills, location, linkedin_url, created_by: req.user.id
     });
@@ -248,7 +270,8 @@ router.put('/:id', async (req, res) => {
       experience_years: b.experience_years !== undefined ? b.experience_years : oldLead.experience_years,
       skills: b.skills !== undefined ? b.skills : oldLead.skills,
       location: b.location !== undefined ? b.location : oldLead.location,
-      linkedin_url: b.linkedin_url !== undefined ? b.linkedin_url : oldLead.linkedin_url
+      linkedin_url: b.linkedin_url !== undefined ? b.linkedin_url : oldLead.linkedin_url,
+      language_spoken: b.language_spoken !== undefined ? b.language_spoken : oldLead.language_spoken
     };
 
     if (newStatus === 'converted' && oldStatus !== 'converted') {

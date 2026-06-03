@@ -19,6 +19,7 @@ import AdminPerformance from './pages/admin/Performance'
 import AdminReports from './pages/admin/Reports'
 import AdminNotifications from './pages/admin/Notifications'
 import AdminTasks from './pages/admin/Tasks'
+import AdminBranches from './pages/admin/Branches'
 
 // HR Layout & Pages
 import HRLayout from './layouts/HRLayout'
@@ -70,6 +71,7 @@ function App() {
             <Route path="performance" element={<AdminPerformance />} />
             <Route path="reports" element={<AdminReports />} />
             <Route path="notifications" element={<AdminNotifications />} />
+            <Route path="branches" element={<AdminBranches />} />
           </Route>
 
           {/* HR Routes */}
@@ -93,7 +95,7 @@ function App() {
           {/* Default redirect */}
           <Route path="/" element={
             user ? (
-              user.role === 'admin' ? <Navigate to="/admin" replace /> : <Navigate to="/hr" replace />
+              ['admin', 'superadmin', 'branchadmin'].includes(user.role) ? <Navigate to="/admin" replace /> : <Navigate to="/hr" replace />
             ) : (
               <Navigate to="/login" replace />
             )

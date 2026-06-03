@@ -3,9 +3,10 @@ import Modal from '../ui/Modal'
 import { PageLoader } from '../ui/LoadingSpinner'
 import api from '../../utils/api'
 import useThemeStore from '../../store/themeStore'
-import { getTheme, card } from '../../utils/styles'
+import { getTheme, card, btnPrimary, input, label } from '../../utils/styles'
 import { getInitials } from '../../utils/helpers'
-import { RiCloseLine, RiPulseLine, RiUploadLine, RiBookmarkLine, RiMedalLine, RiCalendarCheckLine, RiFileTextLine, RiKeyLine } from 'react-icons/ri'
+import { RiCloseLine, RiPulseLine, RiUploadLine, RiBookmarkLine, RiMedalLine, RiCalendarCheckLine, RiFileTextLine, RiKeyLine, RiTimeLine } from 'react-icons/ri'
+import toast from 'react-hot-toast'
 
 export default function HRConsultantModal({ isOpen, onClose, hrId }) {
   const [data, setData] = useState(null)
@@ -15,12 +16,25 @@ export default function HRConsultantModal({ isOpen, onClose, hrId }) {
   const [joinedRole, setJoinedRole] = useState('')
   const [joinedCompany, setJoinedCompany] = useState('')
   const [converting, setConverting] = useState(false)
+  const [bulkLeadsText, setBulkLeadsText] = useState('')
+  const [allocating, setAllocating] = useState(false)
+  const [selectedFollowUp, setSelectedFollowUp] = useState(null)
+  const [showFollowUpModal, setShowFollowUpModal] = useState(false)
+  const [followUpForm, setFollowUpForm] = useState({
+    status: 'completed',
+    outcome: '',
+    notes: '',
+    scheduleDate: '',
+    scheduleTime: '10:00',
+    language_spoken: '',
+  })
   const { isDark } = useThemeStore()
   const t = getTheme(isDark)
 
   const tabs = [
     { id: 'Overview', label: 'Overview', icon: <RiPulseLine /> },
     { id: 'Leads', label: 'Leads', icon: <RiUploadLine /> },
+    { id: 'FollowUps', label: 'Follow Ups', icon: <RiTimeLine /> },
     { id: 'Convert', label: 'Convert', icon: <RiBookmarkLine /> },
     { id: 'Badges', label: 'Badges', icon: <RiMedalLine /> },
     { id: 'Attendance', label: 'Attendance', icon: <RiCalendarCheckLine /> },
@@ -49,6 +63,47 @@ export default function HRConsultantModal({ isOpen, onClose, hrId }) {
       alert('Failed to convert lead')
     } finally {
       setConverting(false)
+    }
+  }
+
+  const submitFollowUpUpdate = async (e) => {
+    e.preventDefault()
+    try {
+      const payload = {
+        status: followUpForm.status,
+        notes: followUpForm.notes,
+        outcome: followUpForm.outcome,
+      }
+      if (followUpForm.status === 'exemption' && followUpForm.language_spoken) {
+        payload.language_spoken = followUpForm.language_spoken
+      }
+      if (followUpForm.status === 'rescheduled') {
+        const d = followUpForm.scheduleDate
+        const t = followUpForm.scheduleTime
+        payload.scheduled_at = new Date(`${d}T${t}:00`).toISOString()
+      }
+      await api.put(`/admin/follow-ups/${selectedFollowUp._id}`, payload)
+      toast.success('Follow-up updated successfully')
+      setShowFollowUpModal(false)
+      fetchData()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error updating follow-up')
+    }
+  }
+
+  const handleAllocateLeads = async () => {
+    if (!bulkLeadsText.trim()) return alert('Please enter leads');
+    setAllocating(true);
+    try {
+      const res = await api.post(`/admin/hr-consultant/${hrId}/allocate-leads`, { text: bulkLeadsText });
+      alert(res.data.message || 'Leads allocated successfully!');
+      setBulkLeadsText('');
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to allocate leads');
+    } finally {
+      setAllocating(false);
     }
   }
 
@@ -97,7 +152,7 @@ export default function HRConsultantModal({ isOpen, onClose, hrId }) {
 
   if (!isOpen) return null
 
-  const { user, stats, badges, leads, attendances, performances } = data || {}
+  const { user, stats, badges, leads, attendances, performances, followUps } = data || {}
 
   const headerGradient = isDark 
     ? 'linear-gradient(90deg, #1e3a8a 0%, #1e40af 50%, #b45309 100%)' 
@@ -122,6 +177,7 @@ export default function HRConsultantModal({ isOpen, onClose, hrId }) {
   )
 
   return (
+    <>
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
       background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
@@ -211,6 +267,29 @@ export default function HRConsultantModal({ isOpen, onClose, hrId }) {
               
               {activeTab === 'Leads' && (
                 <div>
+                  {user?.branch?.name?.toLowerCase() === 'krishnagiri' && (
+                    <div style={{ background: isDark ? '#1e293b' : '#f8fafc', borderRadius: '12px', padding: '20px', marginBottom: '24px', border: `1px solid ${t.border}` }}>
+                      <h3 style={{ fontSize: '1rem', color: t.textPrimary, margin: '0 0 16px', fontWeight: '700' }}>Upload Leads (Name, Mobile per line)</h3>
+                      <textarea
+                        value={bulkLeadsText}
+                        onChange={(e) => setBulkLeadsText(e.target.value)}
+                        placeholder="Name 1, 9000000010&#10;Name 2, 9000000011"
+                        style={{ width: '100%', height: '120px', padding: '12px', borderRadius: '8px', border: `1px solid ${t.border}`, background: isDark ? '#0f172a' : '#fff', color: t.textPrimary, resize: 'vertical', fontSize: '0.875rem', fontFamily: 'monospace', marginBottom: '16px' }}
+                      />
+                      <button
+                        onClick={handleAllocateLeads}
+                        disabled={allocating || !bulkLeadsText.trim()}
+                        style={{
+                          background: '#1d4ed8', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: '8px',
+                          fontSize: '0.9rem', fontWeight: '600', cursor: allocating || !bulkLeadsText.trim() ? 'not-allowed' : 'pointer',
+                          opacity: allocating || !bulkLeadsText.trim() ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', gap: '8px'
+                        }}
+                      >
+                        {allocating ? 'Allocating...' : '+ Allocate'}
+                      </button>
+                    </div>
+                  )}
+
                   <h3 style={{ fontSize: '1rem', color: t.textPrimary, margin: '0 0 16px' }}>Recent Leads</h3>
                   {leads?.length > 0 ? (
                      <div style={{ overflowX: 'auto', border: `1px solid ${t.border}`, borderRadius: '8px' }}>
@@ -238,6 +317,67 @@ export default function HRConsultantModal({ isOpen, onClose, hrId }) {
                        </table>
                      </div>
                   ) : <p style={{ color: t.textSecondary, fontSize: '0.875rem' }}>No leads assigned yet.</p>}
+                </div>
+              )}
+
+              {activeTab === 'FollowUps' && (
+                <div>
+                  <h3 style={{ fontSize: '1rem', color: t.textPrimary, margin: '0 0 16px' }}>Recent Follow Ups</h3>
+                  {followUps?.length > 0 ? (
+                     <div style={{ overflowX: 'auto', border: `1px solid ${t.border}`, borderRadius: '8px' }}>
+                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                         <thead>
+                           <tr style={{ background: isDark ? '#1e293b' : '#f8fafc', borderBottom: `1px solid ${t.border}` }}>
+                             <th style={{ padding: '12px', textAlign: 'left', fontSize: '0.75rem', color: t.textSecondary }}>Date</th>
+                             <th style={{ padding: '12px', textAlign: 'left', fontSize: '0.75rem', color: t.textSecondary }}>Lead</th>
+                             <th style={{ padding: '12px', textAlign: 'left', fontSize: '0.75rem', color: t.textSecondary }}>Type</th>
+                             <th style={{ padding: '12px', textAlign: 'left', fontSize: '0.75rem', color: t.textSecondary }}>Status</th>
+                             <th style={{ padding: '12px', textAlign: 'left', fontSize: '0.75rem', color: t.textSecondary }}>Origin</th>
+                             <th style={{ padding: '12px', textAlign: 'left', fontSize: '0.75rem', color: t.textSecondary }}>Action</th>
+                           </tr>
+                         </thead>
+                         <tbody>
+                           {followUps.map(f => (
+                             <tr key={f._id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                               <td style={{ padding: '12px', fontSize: '0.875rem', color: t.textPrimary }}>
+                                 {new Date(f.scheduled_at).toLocaleDateString()}<br/>
+                                 <span style={{ fontSize: '0.75rem', color: t.textSecondary }}>{new Date(f.scheduled_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                               </td>
+                               <td style={{ padding: '12px', fontSize: '0.875rem', color: t.textPrimary }}>
+                                 {f.lead_id?.name || 'Unknown'}<br/>
+                                 <span style={{ fontSize: '0.75rem', color: t.textSecondary }}>{f.lead_id?.phone || ''}</span>
+                               </td>
+                               <td style={{ padding: '12px', fontSize: '0.875rem', color: t.textSecondary, textTransform: 'capitalize' }}>{f.type || 'Call'}</td>
+                               <td style={{ padding: '12px', fontSize: '0.875rem', color: t.textSecondary, textTransform: 'capitalize' }}>
+                                  <span style={{
+                                    padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold',
+                                    background: f.status === 'completed' ? 'rgba(16, 185, 129, 0.1)' : f.status === 'missed' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                                    color: f.status === 'completed' ? '#10b981' : f.status === 'missed' ? '#ef4444' : '#f59e0b'
+                                  }}>
+                                    {f.status}
+                                  </span>
+                               </td>
+                               <td style={{ padding: '12px', fontSize: '0.875rem', color: t.textSecondary, textTransform: 'capitalize' }}>{f.lead_id?.source || 'Manual'}</td>
+                               <td style={{ padding: '12px', fontSize: '0.875rem' }}>
+                                 {['pending', 'rescheduled'].includes(f.status) ? (
+                                   <button 
+                                     onClick={() => {
+                                       setSelectedFollowUp(f);
+                                       setFollowUpForm({ ...followUpForm, notes: f.notes || '', status: 'completed' });
+                                       setShowFollowUpModal(true);
+                                     }}
+                                     style={{ ...btnPrimary, padding: '4px 10px', fontSize: '0.75rem' }}
+                                   >
+                                     Update
+                                   </button>
+                                 ) : <span style={{ color: t.textMuted }}>—</span>}
+                               </td>
+                             </tr>
+                           ))}
+                         </tbody>
+                       </table>
+                     </div>
+                  ) : <p style={{ color: t.textSecondary, fontSize: '0.875rem' }}>No follow ups scheduled yet.</p>}
                 </div>
               )}
 
@@ -486,5 +626,69 @@ export default function HRConsultantModal({ isOpen, onClose, hrId }) {
         }
       `}</style>
     </div>
+
+      {showFollowUpModal && selectedFollowUp && (
+        <Modal isOpen={true} onClose={() => setShowFollowUpModal(false)} title="Update Follow-up" zIndex={1050}>
+          <form onSubmit={submitFollowUpUpdate}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={label(isDark)}>Status</label>
+                <select 
+                  value={followUpForm.status} 
+                  onChange={e => setFollowUpForm({...followUpForm, status: e.target.value})} 
+                  style={{ ...input(isDark) }}
+                >
+                  <option value="completed">Completed</option>
+                  <option value="converted">Converted</option>
+                  <option value="exemption">Exemption</option>
+                  <option value="not_interested">Not Interested</option>
+                  <option value="missed">Missed</option>
+                  <option value="rescheduled">Rescheduled</option>
+                </select>
+              </div>
+              
+              {followUpForm.status === 'exemption' && (
+                <div>
+                  <label style={label(isDark)}>Language spoken</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Telugu, Tamil..."
+                    value={followUpForm.language_spoken} 
+                    onChange={e => setFollowUpForm({ ...followUpForm, language_spoken: e.target.value })} 
+                    style={{ ...input(isDark) }} 
+                  />
+                </div>
+              )}
+
+              {followUpForm.status === 'rescheduled' && (
+                <div>
+                  <label style={label(isDark)}>New date & time *</label>
+                  <div style={{ display:'flex', gap:'10px' }}>
+                    <input type="date" required value={followUpForm.scheduleDate} onChange={e => setFollowUpForm({...followUpForm, scheduleDate: e.target.value})} style={{ ...input(isDark), flex:1 }} />
+                    <input type="time" required value={followUpForm.scheduleTime} onChange={e => setFollowUpForm({...followUpForm, scheduleTime: e.target.value})} style={{ ...input(isDark), width:'120px' }} />
+                  </div>
+                </div>
+              )}
+
+              {['completed', 'not_interested'].includes(followUpForm.status) && (
+                <div>
+                  <label style={label(isDark)}>Outcome / Reason</label>
+                  <input type="text" value={followUpForm.outcome} onChange={e => setFollowUpForm({...followUpForm, outcome: e.target.value})} placeholder={followUpForm.status === 'completed' ? "e.g. Discussed proposal" : "e.g. Budget too low"} style={{ ...input(isDark) }} />
+                </div>
+              )}
+
+              <div>
+                <label style={label(isDark)}>Notes (Optional)</label>
+                <textarea value={followUpForm.notes} onChange={e => setFollowUpForm({...followUpForm, notes: e.target.value})} rows="3" style={{ ...input(isDark), resize:'vertical' }} placeholder="Any additional details..." />
+              </div>
+
+              <button type="submit" style={{ ...btnPrimary, marginTop: '10px' }}>
+                Save Update
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+    </>
   )
 }
