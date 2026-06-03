@@ -5,16 +5,52 @@ import api from '../../utils/api'
 import useThemeStore from '../../store/themeStore'
 import { getTheme, card } from '../../utils/styles'
 import { getInitials } from '../../utils/helpers'
-import { RiCloseLine } from 'react-icons/ri'
+import { RiCloseLine, RiPulseLine, RiUploadLine, RiBookmarkLine, RiMedalLine, RiCalendarCheckLine, RiFileTextLine, RiKeyLine } from 'react-icons/ri'
 
 export default function HRConsultantModal({ isOpen, onClose, hrId }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('Overview')
+  const [convertLeadId, setConvertLeadId] = useState('')
+  const [joinedRole, setJoinedRole] = useState('')
+  const [joinedCompany, setJoinedCompany] = useState('')
+  const [converting, setConverting] = useState(false)
   const { isDark } = useThemeStore()
   const t = getTheme(isDark)
 
-  const tabs = ['Overview', 'Leads', 'Converted', 'Badges', 'Attendance', 'Report', 'Account']
+  const tabs = [
+    { id: 'Overview', label: 'Overview', icon: <RiPulseLine /> },
+    { id: 'Leads', label: 'Leads', icon: <RiUploadLine /> },
+    { id: 'Convert', label: 'Convert', icon: <RiBookmarkLine /> },
+    { id: 'Badges', label: 'Badges', icon: <RiMedalLine /> },
+    { id: 'Attendance', label: 'Attendance', icon: <RiCalendarCheckLine /> },
+    { id: 'Report', label: 'Report', icon: <RiFileTextLine /> },
+    { id: 'Account', label: 'Account', icon: <RiKeyLine /> }
+  ]
+
+  const handleConvertLead = async (e) => {
+    e.preventDefault()
+    if (!convertLeadId) return alert('Please select a lead')
+    
+    setConverting(true)
+    try {
+      await api.put(`/leads/${convertLeadId}`, {
+        status: 'converted',
+        position_applied: joinedRole,
+        company: joinedCompany
+      })
+      alert('Lead marked as converted successfully!')
+      setConvertLeadId('')
+      setJoinedRole('')
+      setJoinedCompany('')
+      fetchData()
+    } catch (err) {
+      console.error(err)
+      alert('Failed to convert lead')
+    } finally {
+      setConverting(false)
+    }
+  }
 
   useEffect(() => {
     if (isOpen && hrId) {
@@ -133,21 +169,23 @@ export default function HRConsultantModal({ isOpen, onClose, hrId }) {
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', background: isDark ? '#1e293b' : '#f8fafc', padding: '12px 24px 0', borderBottom: `1px solid ${t.border}`, overflowX: 'auto' }}>
+        <div style={{ display: 'flex', background: isDark ? '#1e293b' : '#f8fafc', padding: '12px 24px 0', borderBottom: `1px solid ${t.border}`, overflowX: 'auto', gap: '4px' }}>
           {tabs.map(tab => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
               style={{
-                background: activeTab === tab ? t.bg : 'transparent',
+                display: 'flex', alignItems: 'center', gap: '8px',
+                background: activeTab === tab.id ? t.bg : 'transparent',
                 border: 'none', borderTopLeftRadius: '8px', borderTopRightRadius: '8px',
                 padding: '12px 20px', fontSize: '0.875rem', fontWeight: '600',
-                color: activeTab === tab ? t.textPrimary : t.textSecondary,
+                color: activeTab === tab.id ? t.textPrimary : t.textSecondary,
                 cursor: 'pointer', transition: 'all 0.2s',
-                boxShadow: activeTab === tab ? `0 -2px 10px rgba(0,0,0,0.05)` : 'none'
+                boxShadow: activeTab === tab.id ? `0 -2px 10px rgba(0,0,0,0.05)` : 'none'
               }}
             >
-              {tab}
+              <span style={{ fontSize: '1.1rem', display: 'flex' }}>{tab.icon}</span>
+              {tab.label}
             </button>
           ))}
         </div>
@@ -180,14 +218,20 @@ export default function HRConsultantModal({ isOpen, onClose, hrId }) {
                          <thead>
                            <tr style={{ background: isDark ? '#1e293b' : '#f8fafc', borderBottom: `1px solid ${t.border}` }}>
                              <th style={{ padding: '12px', textAlign: 'left', fontSize: '0.75rem', color: t.textSecondary }}>Name</th>
+                             <th style={{ padding: '12px', textAlign: 'left', fontSize: '0.75rem', color: t.textSecondary }}>Contact</th>
                              <th style={{ padding: '12px', textAlign: 'left', fontSize: '0.75rem', color: t.textSecondary }}>Status</th>
+                             <th style={{ padding: '12px', textAlign: 'left', fontSize: '0.75rem', color: t.textSecondary }}>Origin</th>
                            </tr>
                          </thead>
                          <tbody>
                            {leads.map(l => (
                              <tr key={l._id} style={{ borderBottom: `1px solid ${t.border}` }}>
                                <td style={{ padding: '12px', fontSize: '0.875rem', color: t.textPrimary }}>{l.name}</td>
-                               <td style={{ padding: '12px', fontSize: '0.875rem', color: t.textSecondary }}>{l.status}</td>
+                               <td style={{ padding: '12px', fontSize: '0.875rem', color: t.textSecondary }}>
+                                 {l.phone || l.email || '—'}
+                               </td>
+                               <td style={{ padding: '12px', fontSize: '0.875rem', color: t.textSecondary, textTransform: 'capitalize' }}>{l.status}</td>
+                               <td style={{ padding: '12px', fontSize: '0.875rem', color: t.textSecondary, textTransform: 'capitalize' }}>{l.source || 'Manual'}</td>
                              </tr>
                            ))}
                          </tbody>
@@ -223,8 +267,63 @@ export default function HRConsultantModal({ isOpen, onClose, hrId }) {
                 </div>
               )}
 
-              {activeTab === 'Converted' && (
+              {activeTab === 'Convert' && (
                 <div>
+                  <div style={{ background: isDark ? '#1e293b' : '#fff', borderRadius: '12px', border: `1px solid ${t.border}`, padding: '24px', marginBottom: '24px' }}>
+                    <h3 style={{ fontSize: '1.1rem', color: t.textPrimary, margin: '0 0 20px', fontWeight: '700' }}>Mark a Lead as Converted</h3>
+                    <form onSubmit={handleConvertLead} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: t.textPrimary, marginBottom: '8px' }}>Lead</label>
+                        <select
+                          value={convertLeadId}
+                          onChange={(e) => setConvertLeadId(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${t.border}`, background: isDark ? '#0f172a' : '#f8fafc', color: t.textPrimary, fontSize: '0.9rem', outline: 'none' }}
+                        >
+                          <option value="">Select a lead...</option>
+                          {leads?.filter(l => l.status !== 'converted').map(l => (
+                            <option key={l._id} value={l._id}>
+                              {l.name} — {l.phone || 'No phone'} ({l.status})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: t.textPrimary, marginBottom: '8px' }}>Joined Role</label>
+                        <input
+                          type="text"
+                          value={joinedRole}
+                          onChange={(e) => setJoinedRole(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${t.border}`, background: isDark ? '#0f172a' : '#f8fafc', color: t.textPrimary, fontSize: '0.9rem', outline: 'none' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: t.textPrimary, marginBottom: '8px' }}>Joined Company</label>
+                        <input
+                          type="text"
+                          value={joinedCompany}
+                          onChange={(e) => setJoinedCompany(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${t.border}`, background: isDark ? '#0f172a' : '#f8fafc', color: t.textPrimary, fontSize: '0.9rem', outline: 'none' }}
+                        />
+                      </div>
+
+                      <div style={{ marginTop: '8px' }}>
+                        <button
+                          type="submit"
+                          disabled={converting || !convertLeadId}
+                          style={{
+                            background: '#1d4ed8', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px',
+                            fontSize: '0.9rem', fontWeight: '600', cursor: converting || !convertLeadId ? 'not-allowed' : 'pointer',
+                            opacity: converting || !convertLeadId ? 0.7 : 1, transition: 'all 0.2s'
+                          }}
+                        >
+                          {converting ? 'Saving...' : 'Save Conversion'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
                   <h3 style={{ fontSize: '1rem', color: t.textPrimary, margin: '0 0 16px' }}>Converted Leads</h3>
                   {leads?.filter(l => l.status === 'converted').length > 0 ? (
                      <div style={{ overflowX: 'auto', border: `1px solid ${t.border}`, borderRadius: '8px' }}>
