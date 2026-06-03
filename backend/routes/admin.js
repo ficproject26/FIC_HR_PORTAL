@@ -174,7 +174,7 @@ router.get('/dashboard', async (req, res) => {
 // GET /api/admin/hr-users - List all HR users
 router.get('/hr-users', async (req, res) => {
   try {
-    const { page = 1, limit = 10, search = '', status } = req.query;
+    const { page = 1, limit = 10, search = '', status, branch } = req.query;
     const skip = (page - 1) * limit;
 
     const branchUserIds = await getBranchUserIds(req);
@@ -199,6 +199,10 @@ router.get('/hr-users', async (req, res) => {
       query.is_blocked = false;
     } else if (status === 'blocked') {
       query.is_blocked = true;
+    }
+
+    if (branch) {
+      query.branch = branch;
     }
 
     const [total, totalAdmin, totalHr] = await Promise.all([
@@ -286,7 +290,7 @@ router.put('/hr-users/:id', async (req, res) => {
     const { name, email, phone, department, designation, is_active, role, branch, aadhar_no, pan_no } = req.body;
     
     const user = await User.findOneAndUpdate(
-      { _id: req.params.id, role: { $in: ['hr', 'admin'] } },
+      { _id: req.params.id, role: { $in: ['hr', 'admin', 'branchadmin'] } },
       { name, email, phone, department, designation, is_active, role, branch: branch || undefined, aadhar_no, pan_no },
       { new: true, select: '-password' }
     );
@@ -311,7 +315,7 @@ router.post('/hr-users/:id/block', async (req, res) => {
   try {
     const { block } = req.body;
     const user = await User.findOneAndUpdate(
-      { _id: req.params.id, role: { $in: ['hr', 'admin'] } },
+      { _id: req.params.id, role: { $in: ['hr', 'admin', 'branchadmin'] } },
       { is_blocked: block },
       { new: true, select: '_id name is_blocked' }
     );

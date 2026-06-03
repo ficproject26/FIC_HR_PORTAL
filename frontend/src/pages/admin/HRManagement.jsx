@@ -29,11 +29,12 @@ export default function HRManagement() {
   const [newPassword, setNewPassword] = useState('')
   const [saving, setSaving] = useState(false)
   const [branches, setBranches] = useState([])
+  const [branchFilter, setBranchFilter] = useState('')
   const { isDark } = useThemeStore()
   const { user } = useAuthStore()
   const t = getTheme(isDark)
 
-  useEffect(() => { fetchHRUsers() }, [page, search])
+  useEffect(() => { fetchHRUsers() }, [page, search, branchFilter])
 
   useEffect(() => {
     if (user?.role === 'admin' || user?.role === 'superadmin') {
@@ -44,7 +45,7 @@ export default function HRManagement() {
   const fetchHRUsers = async () => {
     setLoading(true)
     try {
-      const res = await api.get(`/admin/hr-users?page=${page}&limit=10&search=${search}`)
+      const res = await api.get(`/admin/hr-users?page=${page}&limit=10&search=${search}&branch=${branchFilter}`)
       setHrList(res.data.data)
       setPagination(res.data.pagination)
       if (res.data.stats) setStats(res.data.stats)
@@ -183,8 +184,22 @@ export default function HRManagement() {
       </div>
 
       <div style={{ ...card(isDark), padding: '16px', marginBottom: '20px' }}>
-        <div className="search-bar-container" style={{ maxWidth: '320px', width: '100%' }}>
-          <SearchBar value={search} onChange={v => { setSearch(v); setPage(1) }} placeholder="Search users..." />
+        <div className="search-bar-container" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ flex: '1', minWidth: '250px', maxWidth: '320px' }}>
+            <SearchBar value={search} onChange={v => { setSearch(v); setPage(1) }} placeholder="Search users..." />
+          </div>
+          {(user?.role === 'admin' || user?.role === 'superadmin') && (
+            <select
+              value={branchFilter}
+              onChange={e => { setBranchFilter(e.target.value); setPage(1) }}
+              style={{ ...input(isDark), maxWidth: '200px', height: '42px' }}
+            >
+              <option value="">All Branches</option>
+              {branches.map(b => (
+                <option key={b.id || b._id} value={b.id || b._id}>{b.name}</option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 

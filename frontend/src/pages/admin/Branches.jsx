@@ -9,7 +9,7 @@ import useThemeStore from '../../store/themeStore'
 import { card, getTheme, btnPrimary, btnSecondary, btnDanger, input, label } from '../../utils/styles'
 import toast from 'react-hot-toast'
 
-const emptyForm = { name: '', code: '', address: '', city: '', state: '', phone: '', email: '', manager_name: '', branch_type: '', is_active: true, sub_admin_email: '', sub_admin_password: '', sub_admin_confirm_password: '', country: '', pincode: '', opening_date: '' }
+const emptyForm = { name: '', code: '', address: '', city: '', state: '', phone: '', email: '', manager_name: '', branch_type: '', is_active: true, country: '', pincode: '', opening_date: '' }
 
 export default function AdminBranches() {
   const [branches, setBranches] = useState([])
@@ -37,7 +37,7 @@ export default function AdminBranches() {
   }
 
   const openAdd = () => { setEditBranch(null); setForm(emptyForm); setShowModal(true) }
-  const openEdit = (b) => { setEditBranch(b); setForm({ name: b.name, code: b.code, address: b.address || '', city: b.city || '', state: b.state || '', phone: b.phone || '', email: b.email || '', manager_name: b.manager_name || '', branch_type: b.branch_type || '', country: b.country || '', pincode: b.pincode || '', opening_date: b.opening_date ? new Date(b.opening_date).toISOString().split('T')[0] : '', sub_admin_email: b.sub_admin_email || '', sub_admin_password: '', sub_admin_confirm_password: '' }); setShowModal(true) }
+  const openEdit = (b) => { setEditBranch(b); setForm({ name: b.name, code: b.code, address: b.address || '', city: b.city || '', state: b.state || '', phone: b.phone || '', email: b.email || '', manager_name: b.manager_name || '', branch_type: b.branch_type || '', country: b.country || '', pincode: b.pincode || '', opening_date: b.opening_date ? new Date(b.opening_date).toISOString().split('T')[0] : '' }); setShowModal(true) }
 
   const handleSave = async () => {
     if (!form.name || !form.code) return toast.error('Name and code are required')
@@ -283,18 +283,6 @@ export default function AdminBranches() {
           <div style={{ gridColumn: '1 / -1' }}>
             <label style={label(isDark)}>Manager Name</label>
             <input type="text" placeholder="Branch manager name" value={form.manager_name} onChange={e => setForm({ ...form, manager_name: e.target.value })} style={input(isDark)} />
-          </div>
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label style={label(isDark)}>Sub Admin Email</label>
-            <input type="email" placeholder="subadmin@example.com" value={form.sub_admin_email} onChange={e => setForm({ ...form, sub_admin_email: e.target.value })} style={input(isDark)} />
-          </div>
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label style={label(isDark)}>Sub Admin Password</label>
-            <input type="password" placeholder="Enter password..." value={form.sub_admin_password} onChange={e => setForm({ ...form, sub_admin_password: e.target.value })} style={input(isDark)} />
-          </div>
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label style={label(isDark)}>Confirm Sub Admin Password</label>
-            <input type="password" placeholder="Confirm password..." value={form.sub_admin_confirm_password} onChange={e => setForm({ ...form, sub_admin_confirm_password: e.target.value })} style={input(isDark)} />
           </div>
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '24px' }}>
