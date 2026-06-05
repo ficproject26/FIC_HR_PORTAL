@@ -68,7 +68,9 @@ router.get('/', async (req, res) => {
       if (['admin', 'superadmin'].includes(req.user.role)) {
         query.assigned_to = assigned_to === 'unassigned' ? null : assigned_to;
       } else if (branchUserIds) {
-        if (assigned_to !== 'unassigned' && branchUserIds.some(id => id.toString() === assigned_to)) {
+        if (assigned_to === 'unassigned') {
+          query.assigned_to = null;
+        } else if (branchUserIds.some(id => id.toString() === assigned_to)) {
           query.assigned_to = assigned_to;
         }
       }
@@ -76,8 +78,22 @@ router.get('/', async (req, res) => {
 
     const total = await Lead.countDocuments(query);
     const leads = await Lead.find(query)
-      .populate('assigned_to', 'name avatar')
-      .populate('created_by', 'name role')
+      .populate({
+        path: 'assigned_to',
+        select: 'name avatar branch',
+        populate: {
+          path: 'branch',
+          select: 'name'
+        }
+      })
+      .populate({
+        path: 'created_by',
+        select: 'name role branch',
+        populate: {
+          path: 'branch',
+          select: 'name'
+        }
+      })
       .sort({ created_at: -1 })
       .skip(skip)
       .limit(parseInt(limit))
@@ -85,6 +101,14 @@ router.get('/', async (req, res) => {
 
     let data = await Promise.all(leads.map(async l => {
       const pending_followups = await FollowUp.countDocuments({ lead_id: l._id, status: 'pending' });
+      
+      let branch_name = null;
+      if (l.assigned_to && l.assigned_to.branch) {
+        branch_name = l.assigned_to.branch.name;
+      } else if (l.created_by && l.created_by.branch) {
+        branch_name = l.created_by.branch.name;
+      }
+
       return {
         ...l,
         id: l._id,
@@ -93,6 +117,7 @@ router.get('/', async (req, res) => {
         assigned_to_avatar: l.assigned_to ? l.assigned_to.avatar : null,
         created_by_name: l.created_by ? l.created_by.name : null,
         lead_source: (l.created_by && l.created_by.role === 'hr') ? 'Own Lead' : 'Admin Lead',
+        branch_name,
         pending_followups
       };
     }));
@@ -221,7 +246,7 @@ router.post('/', async (req, res) => {
 
     const lead = await Lead.create({
       name, email, phone, company, source: source || 'manual', status: status || 'new', priority: priority || 'medium',
-      assigned_to: ['admin', 'superadmin'].includes(req.user.role) ? (assigned_to || null) : (assigned_to || req.user.id),
+      assigned_to: ['admin', 'superadmin', 'branchadmin'].includes(req.user.role) ? (assigned_to || null) : (assigned_to || req.user.id),
       notes, salary_expectation, position_applied,
       experience_years, skills, location, linkedin_url, created_by: req.user.id
     });

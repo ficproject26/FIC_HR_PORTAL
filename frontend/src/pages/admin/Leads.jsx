@@ -418,7 +418,7 @@ export default function AdminLeads() {
             <div style={{ overflowX:'auto' }}>
               <table className="responsive-table" style={{ width:'100%', borderCollapse:'collapse' }}>
                 <thead>
-                  <tr>{['Lead','Contact','Priority','Position Applied','Assigned To','Origin','Created','Status','Actions'].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr>
+                  <tr>{['Lead','Contact','Branch','Priority','Position Applied','Assigned To','Origin','Created','Status','Actions'].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr>
                 </thead>
                 <tbody>
                   {leads.map(lead => (
@@ -441,6 +441,9 @@ export default function AdminLeads() {
                         ) : (
                           <span style={{ color:t.textMuted }}>—</span>
                         )}
+                      </td>
+                      <td data-label="Branch" style={tdStyle}>
+                        <span style={{ fontWeight:'500' }}>{lead.branch_name || '—'}</span>
                       </td>
                       <td data-label="Priority" style={tdStyle}><PriorityBadge priority={lead.priority} /></td>
                       <td data-label="Position Applied" style={{ ...tdStyle, fontSize:'0.8rem' }}>{lead.position_applied || '—'}</td>
@@ -476,7 +479,7 @@ export default function AdminLeads() {
                       </td>
                     </tr>
                   ))}
-                  {leads.length === 0 && <tr><td colSpan={9} style={{ padding:'48px', textAlign:'center', color:t.textSecondary }}>No leads found</td></tr>}
+                  {leads.length === 0 && <tr><td colSpan={10} style={{ padding:'48px', textAlign:'center', color:t.textSecondary }}>No leads found</td></tr>}
                 </tbody>
               </table>
             </div>
